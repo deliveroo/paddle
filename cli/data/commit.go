@@ -29,7 +29,7 @@ import (
 	"time"
 )
 
-var branch string
+var commitBranch string
 
 var commitCmd = &cobra.Command{
 	Use:   "commit [source path] [version]",
@@ -39,23 +39,18 @@ var commitCmd = &cobra.Command{
 
 Example:
 
-$ paddle data commit -b experimantal source/path version1
+$ paddle data commit -b experimental source/path trained-model/version1
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		if !viper.IsSet("bucket") {
 			exitErrorf("Bucket not defined. Please define 'bucket' in your config file.")
 		}
-		commitPath(args[0], viper.GetString("bucket"), args[1], branch)
+		commitPath(args[0], viper.GetString("bucket"), args[1], commitBranch)
 	},
 }
 
 func init() {
-	commitCmd.Flags().StringVarP(&branch, "branch", "b", "master", "Branch to work on")
-}
-
-func exitErrorf(msg string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg+"\n", args...)
-	os.Exit(1)
+	commitCmd.Flags().StringVarP(&commitBranch, "branch", "b", "master", "Branch to work on")
 }
 
 func commitPath(path string, bucket string, version string, branch string) {
