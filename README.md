@@ -9,4 +9,3 @@ Work in progress.
 ```
 $ paddle help
 ```
-
