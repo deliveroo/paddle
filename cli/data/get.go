@@ -27,21 +27,6 @@ import (
 	"strings"
 )
 
-type S3Target struct {
-	bucket string
-	prefix string
-	path string
-}
-
-func (s *S3Target) copy() *S3Target {
-	clone := *s
-	return &clone
-}
-
-func (t *S3Target) fullPath() string {
-	return fmt.Sprintf("%s/%s/%s", t.bucket, t.prefix, t.path);
-}
-
 var getBranch string
 var getCommitPath string
 
@@ -60,7 +45,7 @@ $ paddle data get -b experimental trained-model/version1 dest/path
 			exitErrorf("Bucket not defined. Please define 'bucket' in your config file.")
 		}
 
-		source := S3Target{
+		source := S3Source{
 			bucket: viper.GetString("bucket"),
 			prefix: fmt.Sprintf("%s/%s", args[0], getBranch),
 			path: getCommitPath,
@@ -75,7 +60,7 @@ func init() {
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
 }
 
-func copyPathToDestination(source *S3Target, destination string) {
+func copyPathToDestination(source *S3Source, destination string) {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -92,7 +77,7 @@ func copyPathToDestination(source *S3Target, destination string) {
 	copy(session, source, destination)
 }
 
-func readHEAD(session *session.Session, source *S3Target) string {
+func readHEAD(session *session.Session, source *S3Source) string {
 	svc := s3.New(session)
 	key := fmt.Sprintf("%s/HEAD", source.prefix)
 
@@ -110,7 +95,7 @@ func readHEAD(session *session.Session, source *S3Target) string {
 	return buf.String()
 }
 
-func copy(session *session.Session, source *S3Target, destination string) {
+func copy(session *session.Session, source *S3Source, destination string) {
 	query := &s3.ListObjectsV2Input{
 		Bucket: aws.String(source.bucket),
 		Prefix: aws.String(source.prefix + "/" + source.path),
@@ -134,7 +119,7 @@ func copy(session *session.Session, source *S3Target, destination string) {
 	}
 }
 
-func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source *S3Target, destination string) {
+func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source *S3Source, destination string) {
 	for _, key := range objects {
 		destFilename := *key.Key
 		if strings.HasSuffix(*key.Key, "/") {
