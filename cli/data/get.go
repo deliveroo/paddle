@@ -45,13 +45,12 @@ $ paddle data get -b experimental trained-model/version1 dest/path
 			exitErrorf("Bucket not defined. Please define 'bucket' in your config file.")
 		}
 
-		source := S3Source{
+		source := S3Path{
 			bucket: viper.GetString("bucket"),
-			prefix: fmt.Sprintf("%s/%s", args[0], getBranch),
-			path: getCommitPath,
+			path: fmt.Sprintf("%s/%s/%s", args[0], getBranch, getCommitPath),
 		}
 
-		copyPathToDestination(&source, args[1])
+		copyPathToDestination(source, args[1])
 	},
 }
 
@@ -60,7 +59,7 @@ func init() {
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
 }
 
-func copyPathToDestination(source *S3Source, destination string) {
+func copyPathToDestination(source S3Path, destination string) {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -68,22 +67,21 @@ func copyPathToDestination(source *S3Source, destination string) {
 	/*
 	 * HEAD contains the path to latest folder
 	 */
-	if source.path == "HEAD" {
-		source = source.copy()
-		source.path = readHEAD(session, source)
+	if source.Basename() == "HEAD" {
+		latestFolder := readHEAD(session, source)
+		source.path = strings.Replace(source.path, "HEAD", latestFolder, 1)
 	}
 
-	fmt.Println("Copying " + source.fullPath() + " to " + destination)
+	fmt.Println("Copying " + source.path + " to " + destination)
 	copy(session, source, destination)
 }
 
-func readHEAD(session *session.Session, source *S3Source) string {
+func readHEAD(session *session.Session, source S3Path) string {
 	svc := s3.New(session)
-	key := fmt.Sprintf("%s/HEAD", source.prefix)
 
 	out, err := svc.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(source.bucket),
-		Key:    aws.String(key),
+		Key:    aws.String(source.path),
 	})
 
 	if err != nil {
@@ -95,10 +93,10 @@ func readHEAD(session *session.Session, source *S3Source) string {
 	return buf.String()
 }
 
-func copy(session *session.Session, source *S3Source, destination string) {
+func copy(session *session.Session, source S3Path, destination string) {
 	query := &s3.ListObjectsV2Input{
 		Bucket: aws.String(source.bucket),
-		Prefix: aws.String(source.prefix + "/" + source.path),
+		Prefix: aws.String(source.path),
 	}
 	svc := s3.New(session)
 
@@ -119,7 +117,7 @@ func copy(session *session.Session, source *S3Source, destination string) {
 	}
 }
 
-func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source *S3Source, destination string) {
+func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, destination string) {
 	for _, key := range objects {
 		destFilename := *key.Key
 		if strings.HasSuffix(*key.Key, "/") {
@@ -133,7 +131,7 @@ func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source *S3Source, d
 		if err != nil {
 			exitErrorf("%v", err)
 		}
-		destFilePath := destination + "/" + strings.TrimPrefix(destFilename, source.prefix + "/")
+		destFilePath := destination + "/" + strings.TrimPrefix(destFilename, source.Dirname() + "/")
 		err = os.MkdirAll(filepath.Dir(destFilePath), 0777)
 		fmt.Print(destFilePath)
 		destFile, err := os.Create(destFilePath)
