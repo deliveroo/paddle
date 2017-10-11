@@ -109,8 +109,7 @@ func commitPath(path string, destination S3Path) {
 func uploadFileToS3(uploader *s3manager.Uploader, bucket string, key string, filePath string) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		fmt.Println("Failed to open file", file, err)
-		os.Exit(1)
+		exitErrorf("Failed to open file", file, err)
 	}
 	defer file.Close()
 
@@ -122,7 +121,6 @@ func uploadFileToS3(uploader *s3manager.Uploader, bucket string, key string, fil
 
 	if err != nil {
 		exitErrorf("Failed to upload data to %s/%s, %s", bucket, key, err.Error())
-		return
 	}
 }
 
