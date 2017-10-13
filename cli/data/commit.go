@@ -20,7 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/deliveroo/paddle/common"
+	"github.com/deliveroo/paddle/rand"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -76,7 +76,7 @@ func commitPath(path string, destination S3Path) {
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	rootKey := generateRootKey(path, destination)
+	rootKey := generateRootKey(destination)
 	keys := filesToKeys(path)
 	uploader := s3manager.NewUploader(sess)
 
@@ -102,18 +102,13 @@ func filesToKeys(path string) (keys []string) {
 	return keys
 }
 
-func generateRootKey(source string, destination S3Path) string {
+func generateRootKey(destination S3Path) string {
 	t := time.Now().UTC()
-	datePath := fmt.Sprintf("%d/%02d/%02d/%02d%02d",
+	datePath := fmt.Sprintf("%d/%02d/%02d/%02d/%02d",
 		t.Year(), t.Month(), t.Day(),
 		t.Hour(), t.Minute())
 
-	hash, err := common.DirHash(source)
-	if err != nil {
-		exitErrorf("Unable to hash input folder")
-	}
-
-	return fmt.Sprintf("%s/%s_%s", destination.path, datePath, hash)
+	return fmt.Sprintf("%s/%s_%s", destination.path, datePath, rand.String(10))
 }
 
 func uploadFileToS3(uploader *s3manager.Uploader, bucket string, key string, filePath string) {
