@@ -6,7 +6,7 @@ import (
 
 type S3Path struct {
 	bucket string
-	path string
+	path   string
 }
 
 func (p *S3Path) Basename() string {

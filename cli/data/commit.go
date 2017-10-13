@@ -21,15 +21,16 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/deliveroo/paddle/common"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 )
 
 var commitBranch string
+var AppFs = afero.NewOsFs()
 
 var commitCmd = &cobra.Command{
 	Use:   "commit [source path] [version]",
@@ -48,9 +49,10 @@ $ paddle data commit -b experimental source/path trained-model/version1
 
 		destination := S3Path{
 			bucket: viper.GetString("bucket"),
-			path: fmt.Sprintf("%s/%s", args[1], commitBranch),
+			path:   fmt.Sprintf("%s/%s", args[1], commitBranch),
 		}
 
+		validatePath(args[0])
 		commitPath(args[0], destination)
 	},
 }
@@ -59,55 +61,63 @@ func init() {
 	commitCmd.Flags().StringVarP(&commitBranch, "branch", "b", "master", "Branch to work on")
 }
 
-func commitPath(path string, destination S3Path) {
-	fd, err := os.Stat(path)
+func validatePath(path string) {
+	fd, err := AppFs.Stat(path)
 	if err != nil {
 		exitErrorf("Source path %v not found", path)
 	}
 	if !fd.Mode().IsDir() {
 		exitErrorf("Source path %v must be a directory", path)
 	}
+}
 
+func commitPath(path string, destination S3Path) {
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	fileList := []string{}
-	filepath.Walk(path, func(p string, f os.FileInfo, err error) error {
-		if common.IsDirectory(p) {
-			return nil
-		} else {
-			fileList = append(fileList, p)
-			return nil
-		}
-	})
-
-	t := time.Now().UTC()
-	datePath := fmt.Sprintf("%d/%02d/%02d/%02d%02d",
-		t.Year(), t.Month(), t.Day(),
-		t.Hour(), t.Minute())
-
-	hash, err := common.DirHash(path)
-	if err != nil {
-		exitErrorf("Unable to hash input folder")
-	}
-
+	rootKey := generateRootKey(path, destination)
+	keys := filesToKeys(path)
 	uploader := s3manager.NewUploader(sess)
-	folderKey := fmt.Sprintf("%s/%s_%s", destination.path, datePath, hash)
 
-	for _, file := range fileList {
-		key := fmt.Sprintf("%s/%s", folderKey, strings.TrimPrefix(file, path + "/"))
+	for _, file := range keys {
+		key := fmt.Sprintf("%s/%s", rootKey, strings.TrimPrefix(file, path+"/"))
 		fmt.Println(file + " -> " + key)
 		uploadFileToS3(uploader, destination.bucket, key, file)
 	}
 
 	// Update HEAD
 	headKey := fmt.Sprintf("%s/HEAD", destination.path)
-	uploadDataToS3(sess, destination.bucket, headKey, folderKey)
+	uploadDataToS3(sess, destination.bucket, headKey, rootKey)
+}
+
+func filesToKeys(path string) (keys []string) {
+	afero.Walk(AppFs, path, func(p string, f os.FileInfo, err error) error {
+		if f.IsDir() {
+			return nil
+		}
+		keys = append(keys, p)
+		return nil
+	})
+	return keys
+}
+
+func generateRootKey(source string, destination S3Path) string {
+	t := time.Now().UTC()
+	datePath := fmt.Sprintf("%d/%02d/%02d/%02d%02d",
+		t.Year(), t.Month(), t.Day(),
+		t.Hour(), t.Minute())
+
+	hash, err := common.DirHash(source)
+	if err != nil {
+		exitErrorf("Unable to hash input folder")
+	}
+
+	return fmt.Sprintf("%s/%s_%s", destination.path, datePath, hash)
 }
 
 func uploadFileToS3(uploader *s3manager.Uploader, bucket string, key string, filePath string) {
-	file, err := os.Open(filePath)
+	file, err := AppFs.Open(filePath)
 	if err != nil {
 		exitErrorf("Failed to open file", file, err)
 	}

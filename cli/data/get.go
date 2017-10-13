@@ -47,7 +47,7 @@ $ paddle data get -b experimental trained-model/version1 dest/path
 
 		source := S3Path{
 			bucket: viper.GetString("bucket"),
-			path: fmt.Sprintf("%s/%s/%s", args[0], getBranch, getCommitPath),
+			path:   fmt.Sprintf("%s/%s/%s", args[0], getBranch, getCommitPath),
 		}
 
 		copyPathToDestination(source, args[1])
@@ -131,7 +131,7 @@ func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, dest
 		if err != nil {
 			exitErrorf("%v", err)
 		}
-		destFilePath := destination + "/" + strings.TrimPrefix(destFilename, source.Dirname() + "/")
+		destFilePath := destination + "/" + strings.TrimPrefix(destFilename, source.Dirname()+"/")
 		err = os.MkdirAll(filepath.Dir(destFilePath), 0777)
 		fmt.Print(destFilePath)
 		destFile, err := os.Create(destFilePath)

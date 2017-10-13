@@ -5,7 +5,7 @@ import "testing"
 func TestBasename(t *testing.T) {
 	path := S3Path{
 		bucket: "foo",
-		path: "aaa/bbb/ccc",
+		path:   "aaa/bbb/ccc",
 	}
 
 	dirname := path.Basename()
@@ -19,7 +19,7 @@ func TestBasename(t *testing.T) {
 func TestBasenameWithEmptyPath(t *testing.T) {
 	path := S3Path{
 		bucket: "foo",
-		path: "",
+		path:   "",
 	}
 
 	dirname := path.Basename()
@@ -33,7 +33,7 @@ func TestBasenameWithEmptyPath(t *testing.T) {
 func TestDirname(t *testing.T) {
 	path := S3Path{
 		bucket: "foo",
-		path: "aaa/bbb/ccc",
+		path:   "aaa/bbb/ccc",
 	}
 
 	dirname := path.Dirname()
@@ -47,7 +47,7 @@ func TestDirname(t *testing.T) {
 func TestDirnameOnBasicPath(t *testing.T) {
 	path := S3Path{
 		bucket: "foo",
-		path: "aaa",
+		path:   "aaa",
 	}
 
 	dirname := path.Dirname()
