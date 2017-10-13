@@ -66,7 +66,7 @@ func validatePath(path string) {
 	if err != nil {
 		exitErrorf("Source path %v not found", path)
 	}
-	if !fd.Mode().IsDir() {
+	if !fd.IsDir() {
 		exitErrorf("Source path %v must be a directory", path)
 	}
 }

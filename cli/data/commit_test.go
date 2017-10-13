@@ -9,7 +9,7 @@ import (
 
 func TestFilesToKeys(t *testing.T) {
 	AppFs = afero.NewMemMapFs()
-	AppFs.MkdirAll("src/", 0755)
+	AppFs.MkdirAll("src/a", 0755)
 	afero.WriteFile(AppFs, "src/a/b", []byte("file c"), 0644)
 	afero.WriteFile(AppFs, "src/c", []byte("file c"), 0644)
 
