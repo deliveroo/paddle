@@ -21,7 +21,7 @@ You will need create a `$HOME/.paddle.yaml` that contains the bucket name, e.g:
 bucket: roo-bucket
 ```
 
-or if you prefer specific `BUCKET` as an environment variable
+or if you prefer specify `BUCKET` as an environment variable
 
 You will also need to create a `$HOME/.aws/config` or `$HOME/.aws/credentials` so Paddle can connect to AWS, e.g.:
 
