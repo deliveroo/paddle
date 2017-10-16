@@ -2,7 +2,7 @@
 
 Paddle is a command line tool for canoe data archival and processing.
 
-## Setup
+## Setup for local development
 
 Make sure you have Go installed on your machine and that you checkout the repo to
 the right folder. By default should be:
