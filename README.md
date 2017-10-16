@@ -21,6 +21,8 @@ You will need create a `$HOME/.paddle.yaml` that contains the bucket name, e.g:
 bucket: roo-bucket
 ```
 
+or if you prefer specific `BUCKET` as an environment variable
+
 You will also need to create a `$HOME/.aws/config` or `$HOME/.aws/credentials` so Paddle can connect to AWS, e.g.:
 
 ```
@@ -31,9 +33,18 @@ aws_secret_access_key=yyy
 region=eu-west-1
 ```
 
-
 ```
 $ go build
+```
+
+## Release
+
+In order to release a new version, set up github export GITHUB_TOKEN=[YOUR_TOKEN] and do the following steps:
+
+```
+$ git tag -a vX.X.X -m "[Comment]"
+$ git push origin vX.X.X
+$ goreleaser
 ```
 
 ## Usage
