@@ -14,6 +14,13 @@ git clone git@github.com:deliveroo/paddle.git
 cd paddle
 ```
 
+Install dependencies:
+
+```
+brew install glide
+glide up -v
+```
+
 You will need create a `$HOME/.paddle.yaml` that contains the bucket name, e.g:
 
 ```
