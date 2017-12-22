@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 )
 
 var stepName string
@@ -63,6 +64,12 @@ func runPipeline(path string) {
 	}
 	fmt.Printf("{}", list)
 	for _, step := range pipeline.Steps {
-		compilePodTemplate(pipeline, &step)
+		stepPod := compilePodTemplate(pipeline, &step)
+		decode := scheme.Codecs.UniversalDeserializer().Decode
+		obj, groupVersionKind, err := decode([]byte(stepPod), nil, nil)
+
+		if err != nil {
+			log.Fatal(fmt.Sprintf("Error while decoding YAML object. Err was: %s", err))
+		}
 	}
 }
