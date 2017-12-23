@@ -1,8 +1,8 @@
-hash: 4a4c528b40066dab94dbbb908b88a4bb99fc963edf6a538ed47d49d778f71d3c
-updated: 2017-12-22T16:44:13.9306187Z
+hash: 8be82b4770683548c48ea100f6395f68896018f3bc2119d69e22d459aeea91ea
+updated: 2017-12-22T22:34:41.613793Z
 imports:
 - name: github.com/aws/aws-sdk-go
-  version: 32d0e45c3f93cd20c25614183246d7e34bc7385c
+  version: 82ad808f2307df0776c038bfd7ea85440a35c02e
   subpackages:
   - aws
   - aws/awserr
@@ -31,6 +31,10 @@ imports:
   - service/s3/s3iface
   - service/s3/s3manager
   - service/sts
+- name: github.com/davecgh/go-spew
+  version: 346938d642f2ec3594ed81d874461961cd0faa76
+  subpackages:
+  - spew
 - name: github.com/emicklei/go-restful
   version: ff4f55a206334ef123e4f79bbf348980da81ca46
   subpackages:
@@ -78,6 +82,10 @@ imports:
   version: 787624de3eb7bd915c329cba748687a3b22666a6
   subpackages:
   - diskcache
+- name: github.com/hashicorp/golang-lru
+  version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
+  subpackages:
+  - simplelru
 - name: github.com/hashicorp/hcl
   version: 23c074d0eceb2b8a5bfdbb271ab780cde70f05a8
   subpackages:
@@ -143,7 +151,6 @@ imports:
   version: 1c05540f6879653db88113bc4a2b70aec4bd491f
   subpackages:
   - context
-  - context/ctxhttp
   - http2
   - http2/hpack
   - idna
@@ -206,17 +213,9 @@ imports:
 - name: k8s.io/apimachinery
   version: 180eddb345a5be3a157cea1c624700ad5bd27b8f
   subpackages:
-  - pkg/api/equality
   - pkg/api/errors
   - pkg/api/meta
   - pkg/api/resource
-  - pkg/api/testing
-  - pkg/api/testing/fuzzer
-  - pkg/api/testing/roundtrip
-  - pkg/apimachinery
-  - pkg/apimachinery/announced
-  - pkg/apimachinery/registered
-  - pkg/apis/meta/fuzzer
   - pkg/apis/meta/internalversion
   - pkg/apis/meta/v1
   - pkg/apis/meta/v1/unstructured
@@ -240,24 +239,17 @@ imports:
   - pkg/util/diff
   - pkg/util/errors
   - pkg/util/framer
-  - pkg/util/httpstream
-  - pkg/util/httpstream/spdy
   - pkg/util/intstr
   - pkg/util/json
-  - pkg/util/mergepatch
   - pkg/util/net
-  - pkg/util/remotecommand
   - pkg/util/runtime
   - pkg/util/sets
-  - pkg/util/strategicpatch
   - pkg/util/validation
   - pkg/util/validation/field
   - pkg/util/wait
   - pkg/util/yaml
   - pkg/version
   - pkg/watch
-  - third_party/forked/golang/json
-  - third_party/forked/golang/netutil
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
   version: 78700dec6369ba22221b72770783300f143df150
@@ -297,13 +289,16 @@ imports:
   - rest
   - rest/watch
   - tools/auth
+  - tools/cache
   - tools/clientcmd
   - tools/clientcmd/api
   - tools/clientcmd/api/latest
   - tools/clientcmd/api/v1
   - tools/metrics
+  - tools/pager
   - tools/reference
   - transport
+  - util/buffer
   - util/cert
   - util/flowcontrol
   - util/homedir
@@ -312,5 +307,4 @@ imports:
   version: 39a7bf85c140f972372c2a0d1ee40adbf0c8bfe1
   subpackages:
   - pkg/common
-  - pkg/util/proto
 testImports: []

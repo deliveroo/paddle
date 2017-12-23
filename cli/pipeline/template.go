@@ -1,13 +1,13 @@
 package pipeline
 
 import (
+	"bytes"
 	"fmt"
-	"os"
 	"strings"
 	"text/template"
 )
 
-type PodTemplateData struct {
+type PodDefinition struct {
 	PodName    string
 	StepName   string
 	BranchName string
@@ -123,14 +123,11 @@ spec:
               key: aws-secret-access-key
 `
 
-func compilePodTemplate(pipelineDefinition *PipelineDefinition, pipelineDefinitionStep *PipelineDefinitionStep) string {
-	fmap := template.FuncMap{
-		"sanitizeName": sanitizeName,
-	}
+func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinitionStep *PipelineDefinitionStep) *PodDefinition {
 	stepName := sanitizeName(pipelineDefinitionStep.Step)
 	branchName := sanitizeName(pipelineDefinitionStep.Branch)
 	podName := fmt.Sprintf("%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), stepName, branchName)
-	templateData := PodTemplateData{
+	return &PodDefinition{
 		PodName:    podName,
 		Namespace:  pipelineDefinition.Namespace,
 		Step:       *pipelineDefinitionStep,
@@ -138,12 +135,20 @@ func compilePodTemplate(pipelineDefinition *PipelineDefinition, pipelineDefiniti
 		StepName:   stepName,
 		BranchName: branchName,
 	}
+
+}
+
+func (p PodDefinition) compile() *bytes.Buffer {
+	fmap := template.FuncMap{
+		"sanitizeName": sanitizeName,
+	}
 	tmpl := template.Must(template.New("podTemplate").Funcs(fmap).Parse(podTemplate))
-	err := tmpl.Execute(os.Stdout, templateData)
+	buffer := new(bytes.Buffer)
+	err := tmpl.Execute(buffer, p)
 	if err != nil {
 		panic(err.Error())
 	}
-	return ""
+	return buffer
 }
 
 func sanitizeName(name string) string {
