@@ -24,7 +24,7 @@ metadata:
   name: "{{ .PodName }}"
   namespace: {{ .Namespace }}
   labels:
-    pipeline: canoe
+    canoe: pipeline
 spec:
   restartPolicy: Never
   volumes:
