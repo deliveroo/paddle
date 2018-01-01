@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	"log"
+	"regexp"
 	"time"
 )
 
@@ -78,6 +79,12 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 	pipeline := parsePipeline(data)
 	if flags.BucketName != "" {
 		pipeline.Bucket = flags.BucketName
+	}
+	// For compatibility with Ansible executor
+	r, _ := regexp.Compile("default\\('(.+)'\\)")
+	matches := r.FindStringSubmatch(pipeline.Bucket)
+	if matches != nil && matches[1] != "" {
+		pipeline.Bucket = matches[1]
 	}
 
 	for _, step := range pipeline.Steps {
@@ -165,6 +172,9 @@ func deleteAndWait(c *kubernetes.Clientset, podDefinition *PodDefinition) error 
 		err = pods.Delete(podDefinition.PodName, &metav1.DeleteOptions{})
 		if err != nil {
 			if k8errors.IsNotFound(err) {
+				if deleting {
+					log.Printf("[paddle] deleted pod %s", podDefinition.PodName)
+				}
 				return true, nil
 			} else {
 				return true, err
