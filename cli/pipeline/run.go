@@ -33,13 +33,16 @@ import (
 type runCmdFlagsStruct struct {
 	StepName   string
 	BucketName string
+	TailLogs   bool
 }
 
-const defaultPollInterval = 5 * time.Second
+const defaultPollInterval = 2 * time.Second
 const defaultTimeout = 120 * time.Second
 
 var runCmdFlags *runCmdFlagsStruct
-var clientset *kubernetes.Clientset
+var clientset kubernetes.Interface
+
+var logFatalf = log.Fatalf
 
 var runCmd = &cobra.Command{
 	Use:   "run [pipeline_yaml]",
@@ -60,6 +63,7 @@ func init() {
 	runCmdFlags = &runCmdFlagsStruct{}
 	runCmd.Flags().StringVarP(&runCmdFlags.StepName, "step", "s", "", "Single step to execute")
 	runCmd.Flags().StringVarP(&runCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
+	runCmd.Flags().BoolVarP(&runCmdFlags.TailLogs, "logs", "l", true, "Tail logs")
 
 	config, err := getKubernetesConfig()
 	if err != nil {
@@ -93,7 +97,7 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 		}
 		err = runPipelineStep(pipeline, &step, flags)
 		if err != nil {
-			log.Fatalf("[paddle] %s", err.Error())
+			logFatalf("[paddle] %s", err.Error())
 		}
 	}
 }
@@ -111,15 +115,15 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		return err
 	}
 
-	pod, err = pods.Create(pod)
-	if err != nil {
-		return err
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	watch, err := Watch(ctx, clientset, pod)
+	if err != nil {
+		return err
+	}
+
+	pod, err = pods.Create(pod)
 	if err != nil {
 		return err
 	}
@@ -132,7 +136,9 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		case Added:
 			log.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
 			containers[e.Container] = true
-			TailLogs(ctx, clientset, e.Pod, e.Container)
+			if flags.TailLogs {
+				TailLogs(ctx, clientset, e.Pod, e.Container)
+			}
 		case Deleted:
 		case Removed:
 			log.Printf("[paddle] Container removed: %s", e.Container)
@@ -149,7 +155,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 					msg = fmt.Sprintf("Container %s/%s failed", pod.Name, e.Container)
 				}
 				_, present := containers[e.Container]
-				if !present { // container died before being added
+				if !present && flags.TailLogs { // container died before being added
 					TailLogs(ctx, clientset, e.Pod, e.Container)
 					time.Sleep(3 * time.Second) // give it time to tail logs
 				}
@@ -164,7 +170,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	return nil
 }
 
-func deleteAndWait(c *kubernetes.Clientset, podDefinition *PodDefinition) error {
+func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition) error {
 	pods := clientset.CoreV1().Pods(podDefinition.Namespace)
 	deleting := false
 	err := wait.PollImmediate(defaultPollInterval, defaultTimeout, func() (bool, error) {

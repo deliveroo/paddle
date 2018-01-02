@@ -44,6 +44,12 @@ region=eu-west-1
 $ go build
 ```
 
+## Testing
+
+```
+$ go test ./...
+```
+
 ## Release
 
 In order to release a new version, set up github export GITHUB_TOKEN=[YOUR_TOKEN] and do the following steps:

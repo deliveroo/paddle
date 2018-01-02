@@ -28,7 +28,7 @@ type WatchEvent struct {
 	Message   string
 }
 
-func Watch(ctx context.Context, c *kubernetes.Clientset, watchPod *v1.Pod) (<-chan WatchEvent, error) {
+func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-chan WatchEvent, error) {
 	podSelector, err := fields.ParseSelector("metadata.name=" + watchPod.Name)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func Watch(ctx context.Context, c *kubernetes.Clientset, watchPod *v1.Pod) (<-ch
 	return out, nil
 }
 
-func TailLogs(ctx context.Context, c *kubernetes.Clientset, pod *v1.Pod, container string) {
+func TailLogs(ctx context.Context, c kubernetes.Interface, pod *v1.Pod, container string) {
 	pods := c.Core().Pods(pod.Namespace)
 
 	req := pods.GetLogs(pod.Name, &v1.PodLogOptions{
