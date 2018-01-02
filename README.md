@@ -18,7 +18,7 @@ Install dependencies:
 
 ```
 brew install glide
-glide up -v
+glide i
 ```
 
 You will need create a `$HOME/.paddle.yaml` that contains the bucket name, e.g:
