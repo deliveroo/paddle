@@ -3,6 +3,7 @@ package pipeline
 import (
 	"gopkg.in/yaml.v2"
 	"log"
+	"regexp"
 )
 
 type PipelineDefinitionStep struct {
@@ -37,5 +38,13 @@ func parsePipeline(data []byte) *PipelineDefinition {
 	if err != nil {
 		log.Fatalf("error: %v", err)
 	}
+
+	// For compatibility with Ansible executor
+	r, _ := regexp.Compile("default\\('(.+)'\\)")
+	matches := r.FindStringSubmatch(pipeline.Bucket)
+	if matches != nil && matches[1] != "" {
+		pipeline.Bucket = matches[1]
+	}
+
 	return &pipeline
 }

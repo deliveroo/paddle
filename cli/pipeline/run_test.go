@@ -21,6 +21,8 @@ func parseTimeOrDie(ts string) metav1.Time {
 	return metav1.Time{Time: t}
 }
 
+var testRunFlags = &runCmdFlagsStruct{TailLogs: false, DeletePollInterval: 1 * time.Millisecond}
+
 func createPodStatus(phase v1.PodPhase, containers map[string]bool) v1.PodStatus {
 	containerStatuses := make([]v1.ContainerStatus, len(containers))
 	for container, running := range containers {
@@ -93,7 +95,7 @@ func TestRunPipelineSuccess(t *testing.T) {
 			p := pod.DeepCopy()
 			p.Status = createPodStatus(v1.PodRunning, map[string]bool{pod.Name + "/main": true, pod.Name + "/paddle": true})
 			fakeWatch.Add(p)
-			time.Sleep(1 * time.Second)
+			time.Sleep(100 * time.Millisecond)
 			p = p.DeepCopy()
 			p.Status = createPodStatus(v1.PodSucceeded, map[string]bool{pod.Name + "/main": true, pod.Name + "/paddle": true})
 			fakeWatch.Modify(p)
@@ -101,7 +103,7 @@ func TestRunPipelineSuccess(t *testing.T) {
 		return true, object, nil
 	})
 
-	runPipeline("test/sample_steps_passing.yml", &runCmdFlagsStruct{TailLogs: false})
+	runPipeline("test/sample_steps_passing.yml", testRunFlags)
 
 	expectPods := [2]string{"sample-steps-passing-step1-master", "sample-steps-passing-step2-master"}
 
@@ -153,7 +155,7 @@ func TestRunPipelineFailure(t *testing.T) {
 		return true, object, nil
 	})
 
-	runPipeline("test/sample_steps_passing.yml", &runCmdFlagsStruct{TailLogs: false})
+	runPipeline("test/sample_steps_passing.yml", testRunFlags)
 
 	if len(errors) != 2 {
 		t.Errorf("excepted two errors, actual %v", len(errors))

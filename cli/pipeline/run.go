@@ -26,18 +26,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	"log"
-	"regexp"
 	"time"
 )
 
 type runCmdFlagsStruct struct {
-	StepName   string
-	BucketName string
-	TailLogs   bool
+	StepName           string
+	BucketName         string
+	TailLogs           bool
+	DeletePollInterval time.Duration
 }
 
-const defaultPollInterval = 2 * time.Second
-const defaultTimeout = 120 * time.Second
+const defaultDeletePollInterval = 2 * time.Second
+const deleteTimeout = 120 * time.Second
 
 var runCmdFlags *runCmdFlagsStruct
 var clientset kubernetes.Interface
@@ -64,6 +64,7 @@ func init() {
 	runCmd.Flags().StringVarP(&runCmdFlags.StepName, "step", "s", "", "Single step to execute")
 	runCmd.Flags().StringVarP(&runCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
 	runCmd.Flags().BoolVarP(&runCmdFlags.TailLogs, "logs", "l", true, "Tail logs")
+	runCmdFlags.DeletePollInterval = defaultDeletePollInterval
 
 	config, err := getKubernetesConfig()
 	if err != nil {
@@ -83,12 +84,6 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 	pipeline := parsePipeline(data)
 	if flags.BucketName != "" {
 		pipeline.Bucket = flags.BucketName
-	}
-	// For compatibility with Ansible executor
-	r, _ := regexp.Compile("default\\('(.+)'\\)")
-	matches := r.FindStringSubmatch(pipeline.Bucket)
-	if matches != nil && matches[1] != "" {
-		pipeline.Bucket = matches[1]
 	}
 
 	for _, step := range pipeline.Steps {
@@ -110,7 +105,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	yaml.NewYAMLOrJSONDecoder(stepPodBuffer, 4096).Decode(pod)
 	pods := clientset.CoreV1().Pods(pipeline.Namespace)
 
-	err := deleteAndWait(clientset, podDefinition)
+	err := deleteAndWait(clientset, podDefinition, flags)
 	if err != nil {
 		return err
 	}
@@ -170,10 +165,10 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	return nil
 }
 
-func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition) error {
+func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
 	pods := clientset.CoreV1().Pods(podDefinition.Namespace)
 	deleting := false
-	err := wait.PollImmediate(defaultPollInterval, defaultTimeout, func() (bool, error) {
+	err := wait.PollImmediate(flags.DeletePollInterval, deleteTimeout, func() (bool, error) {
 		var err error
 		err = pods.Delete(podDefinition.PodName, &metav1.DeleteOptions{})
 		if err != nil {
