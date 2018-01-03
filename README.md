@@ -60,6 +60,8 @@ Ensure your git repo is clean. Then update VERSION (no need to commit it, it wil
 $ ./release.sh
 ```
 
+*Note*: this will delete and recreate the `dist` folder.
+
 ## Usage
 
 ```

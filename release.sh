@@ -13,4 +13,5 @@ git add cli/version.go
 git commit -m "Version $VERSION" || echo "Version not changed"
 git tag -a v$VERSION -m "Version $VERSION"
 git push origin v$VERSION
+rm -rf ./dist
 goreleaser
