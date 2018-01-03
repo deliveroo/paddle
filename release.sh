@@ -7,7 +7,7 @@ die() { echo "$*" 1>&2 ; exit 1; }
 
 VERSION=`cat VERSION | tr -d '\n'`
 git diff-index --quiet --cached HEAD -- || die "Index dirty, commit first"
-go generate
+go generate ./cli
 git add VERSION
 git add cli/version.go
 git commit -m "Version $VERSION" || echo "Version not changed"
