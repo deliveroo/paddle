@@ -25,19 +25,22 @@ import (
 )
 
 var cfgFile string
+var outputVersion bool
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:   "paddle",
 	Short: "Canoe tool for data archival and processing",
 	Long:  "Canoe tool for data archival and processing",
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	//	Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+		if outputVersion {
+			fmt.Println(PaddleVersion)
+		} else {
+			cmd.Help()
+		}
+	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -49,10 +52,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.paddle.yaml)")
-
-	// // Cobra also supports local flags, which will only run
-	// // when this action is called directly.
-	// RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.Flags().BoolVar(&outputVersion, "version", false, "output paddle version")
 
 	RootCmd.AddCommand(data.DataCmd)
 	RootCmd.AddCommand(pipeline.PipelineCmd)
