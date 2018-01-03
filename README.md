@@ -52,12 +52,12 @@ $ go test ./...
 
 ## Release
 
-In order to release a new version, set up github export GITHUB_TOKEN=[YOUR_TOKEN] and do the following steps:
+In order to release a new version, set up github export GITHUB_TOKEN=[YOUR_TOKEN]
+
+Ensure your git repo is clean. Then update VERSION (no need to commit it, it will be committed automatically), and run:
 
 ```
-$ git tag -a vX.X.X -m "[Comment]"
-$ git push origin vX.X.X
-$ goreleaser
+$ ./release.sh
 ```
 
 ## Usage
