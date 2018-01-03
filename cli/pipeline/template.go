@@ -8,11 +8,12 @@ import (
 )
 
 type PodDefinition struct {
-	PodName    string
-	StepName   string
-	BranchName string
-	Namespace  string
-	Bucket     string
+	PodName     string
+	StepName    string
+	StepVersion string
+	BranchName  string
+	Namespace   string
+	Bucket      string
 
 	Step PipelineDefinitionStep
 }
@@ -24,7 +25,10 @@ metadata:
   name: "{{ .PodName }}"
   namespace: {{ .Namespace }}
   labels:
-    canoe: pipeline
+    canoe.executor: paddle
+    canoe.step.name: {{ .StepName }}
+    canoe.step.branch: {{ .BranchName }}
+    canoe.step.version: {{ .StepVersion }}
 spec:
   restartPolicy: Never
   volumes:
@@ -126,14 +130,16 @@ spec:
 func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinitionStep *PipelineDefinitionStep) *PodDefinition {
 	stepName := sanitizeName(pipelineDefinitionStep.Step)
 	branchName := sanitizeName(pipelineDefinitionStep.Branch)
+	stepVersion := sanitizeName(pipelineDefinitionStep.Version)
 	podName := fmt.Sprintf("%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), stepName, branchName)
 	return &PodDefinition{
-		PodName:    podName,
-		Namespace:  pipelineDefinition.Namespace,
-		Step:       *pipelineDefinitionStep,
-		Bucket:     pipelineDefinition.Bucket,
-		StepName:   stepName,
-		BranchName: branchName,
+		PodName:     podName,
+		Namespace:   pipelineDefinition.Namespace,
+		Step:        *pipelineDefinitionStep,
+		Bucket:      pipelineDefinition.Bucket,
+		StepName:    stepName,
+		StepVersion: stepVersion,
+		BranchName:  branchName,
 	}
 
 }
