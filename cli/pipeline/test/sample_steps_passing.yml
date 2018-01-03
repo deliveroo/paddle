@@ -1,0 +1,35 @@
+pipeline: sample-steps-passing
+bucket: "{{ s3_bucket_name | default('canoe-sample-pipeline') }}"
+namespace: modeltraining
+
+steps:
+
+  -
+    step: step1
+    version: version1
+    inputs: []
+    image: 219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest
+    branch: master
+    commands:
+      - echo executing sample-pipeline-data > ${OUTPUT_PATH}/sample-pipeline-data.txt
+    resources:
+      cpu: 1
+      memory: 1Gi
+
+  -
+    step: step2
+    version: version1a
+    inputs:
+      -
+        step: step1
+        version: version1
+        branch: master
+        path: HEAD
+    image: 219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest
+    branch: master
+    commands:
+      - echo executing sample-pipeline-data > ${OUTPUT_PATH}/sample-pipeline-data-model.txt
+    resources:
+      cpu: 2
+      memory: 2Gi
+

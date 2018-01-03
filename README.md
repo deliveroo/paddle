@@ -14,6 +14,13 @@ git clone git@github.com:deliveroo/paddle.git
 cd paddle
 ```
 
+Install dependencies:
+
+```
+brew install glide
+glide i
+```
+
 You will need create a `$HOME/.paddle.yaml` that contains the bucket name, e.g:
 
 ```
@@ -37,14 +44,20 @@ region=eu-west-1
 $ go build
 ```
 
-## Release
-
-In order to release a new version, set up github export GITHUB_TOKEN=[YOUR_TOKEN] and do the following steps:
+## Testing
 
 ```
-$ git tag -a vX.X.X -m "[Comment]"
-$ git push origin vX.X.X
-$ goreleaser
+$ go test ./...
+```
+
+## Release
+
+In order to release a new version, set up github export GITHUB_TOKEN=[YOUR_TOKEN]
+
+Ensure your git repo is clean. Then update VERSION (no need to commit it, it will be committed automatically), and run:
+
+```
+$ ./release.sh
 ```
 
 ## Usage
