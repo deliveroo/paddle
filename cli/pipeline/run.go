@@ -48,7 +48,7 @@ var runCmd = &cobra.Command{
 	Use:   "run [pipeline_yaml]",
 	Short: "Run a pipeline or a pipeline step",
 	Args:  cobra.ExactArgs(1),
-	Long: `Store data into S3 under a versioned path, and update HEAD.
+	Long: `Run a pipeline (or a single step) on the Kubernetes cluster.
 
 Example:
 
