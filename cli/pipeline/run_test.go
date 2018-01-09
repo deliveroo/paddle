@@ -21,7 +21,11 @@ func parseTimeOrDie(ts string) metav1.Time {
 	return metav1.Time{Time: t}
 }
 
-var testRunFlags = &runCmdFlagsStruct{TailLogs: false, DeletePollInterval: 1 * time.Millisecond}
+var testRunFlags = &runCmdFlagsStruct{
+	TailLogs:           false,
+	DeletePollInterval: 1 * time.Millisecond,
+	StartTimeout:       1 * time.Hour,
+}
 
 func createPodStatus(phase v1.PodPhase, containers map[string]bool) v1.PodStatus {
 	containerStatuses := make([]v1.ContainerStatus, len(containers))
@@ -159,5 +163,54 @@ func TestRunPipelineFailure(t *testing.T) {
 
 	if len(errors) != 2 {
 		t.Errorf("excepted two errors, actual %v", len(errors))
+	}
+}
+
+func TestRunPipelineStartTimeout(t *testing.T) {
+	origLogFatalf := logFatalf
+
+	// after this test, replace the original fatal function
+	defer func() { logFatalf = origLogFatalf }()
+
+	errors := []string{}
+	logFatalf = func(format string, args ...interface{}) {
+		if len(args) > 0 {
+			errors = append(errors, fmt.Sprintf(format, args))
+		} else {
+			errors = append(errors, format)
+		}
+	}
+
+	client := fake.NewSimpleClientset()
+	clientset = client
+
+	fakeWatch := watch.NewFake()
+	client.PrependWatchReactor("pods", ktesting.DefaultWatchReactor(fakeWatch, nil))
+
+	client.PrependReactor("delete", "pods", func(action ktesting.Action) (bool, runtime.Object, error) {
+		fakeWatch.Reset()
+		return true, nil, k8errors.NewNotFound(v1.Resource("pods"), action.(ktesting.DeleteAction).GetName())
+	})
+
+	client.PrependReactor("create", "pods", func(action ktesting.Action) (bool, runtime.Object, error) {
+		a := action.(ktesting.CreateAction)
+		object := a.GetObject()
+		time.Sleep(200 * time.Millisecond)
+		return true, object, nil
+	})
+
+	flags := *testRunFlags
+	flags.StartTimeout = 1 * time.Millisecond
+
+	runPipeline("test/sample_steps_passing.yml", &flags)
+
+	if len(errors) != 2 {
+		t.Errorf("excepted two errors, actual %v", len(errors))
+	}
+	msg := "[paddle] [Timeout waiting for pod to start. Cluster might not have sufficient resources.]"
+	for _, err := range errors {
+		if err != msg {
+			t.Errorf("Expected timeout error, got %s", err)
+		}
 	}
 }

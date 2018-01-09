@@ -34,10 +34,12 @@ type runCmdFlagsStruct struct {
 	BucketName         string
 	TailLogs           bool
 	DeletePollInterval time.Duration
+	StartTimeout       time.Duration
 }
 
 const defaultDeletePollInterval = 2 * time.Second
 const deleteTimeout = 120 * time.Second
+const defaultStartTimeout = 10 * time.Minute
 
 var runCmdFlags *runCmdFlagsStruct
 var clientset kubernetes.Interface
@@ -65,6 +67,7 @@ func init() {
 	runCmd.Flags().StringVarP(&runCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
 	runCmd.Flags().BoolVarP(&runCmdFlags.TailLogs, "logs", "l", true, "Tail logs")
 	runCmdFlags.DeletePollInterval = defaultDeletePollInterval
+	runCmdFlags.StartTimeout = defaultStartTimeout
 
 	config, err := getKubernetesConfig()
 	if err != nil {
@@ -125,39 +128,51 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 
 	containers := make(map[string]bool)
 
+	go func() {
+		time.Sleep(flags.StartTimeout)
+		if len(containers) < len(pod.Spec.Containers) {
+			cancel()
+		}
+	}()
+
 	for {
-		e := <-watch
-		switch e.Type {
-		case Added:
-			log.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
-			containers[e.Container] = true
-			if flags.TailLogs {
-				TailLogs(ctx, clientset, e.Pod, e.Container)
-			}
-		case Deleted:
-		case Removed:
-			log.Printf("[paddle] Container removed: %s", e.Container)
-			continue
-		case Completed:
-			log.Printf("[paddle] Pod execution completed")
-			return nil
-		case Failed:
-			var msg string
-			if e.Container != "" {
-				if e.Message != "" {
-					msg = fmt.Sprintf("Container %s/%s failed: '%s'", pod.Name, e.Container, e.Message)
-				} else {
-					msg = fmt.Sprintf("Container %s/%s failed", pod.Name, e.Container)
-				}
-				_, present := containers[e.Container]
-				if !present && flags.TailLogs { // container died before being added
+		select {
+		case e := <-watch:
+			switch e.Type {
+			case Added:
+				log.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
+				containers[e.Container] = true
+				if flags.TailLogs {
 					TailLogs(ctx, clientset, e.Pod, e.Container)
-					time.Sleep(3 * time.Second) // give it time to tail logs
 				}
-			} else {
-				msg = "Pod failed"
+			case Deleted:
+			case Removed:
+				log.Printf("[paddle] Container removed: %s", e.Container)
+				continue
+			case Completed:
+				log.Printf("[paddle] Pod execution completed")
+				return nil
+			case Failed:
+				var msg string
+				if e.Container != "" {
+					if e.Message != "" {
+						msg = fmt.Sprintf("Container %s/%s failed: '%s'", pod.Name, e.Container, e.Message)
+					} else {
+						msg = fmt.Sprintf("Container %s/%s failed", pod.Name, e.Container)
+					}
+					_, present := containers[e.Container]
+					if !present && flags.TailLogs { // container died before being added
+						TailLogs(ctx, clientset, e.Pod, e.Container)
+						time.Sleep(3 * time.Second) // give it time to tail logs
+					}
+				} else {
+					msg = "Pod failed"
+				}
+				return errors.New(msg)
 			}
-			return errors.New(msg)
+		case <-ctx.Done():
+			pods.Delete(podDefinition.PodName, &metav1.DeleteOptions{})
+			return errors.New("Timeout waiting for pod to start. Cluster might not have sufficient resources.")
 		}
 	}
 
