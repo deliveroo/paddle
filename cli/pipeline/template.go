@@ -140,14 +140,6 @@ spec:
             secretKeyRef:
               name: aws-credentials
               key: aws-secret-access-key
-        {{ range $index, $secret := .Secrets }}
-        -
-          name: {{ $secret.Name }}
-          valueFrom:
-            secretKeyRef:
-              name: {{ $secret.Store }}
-              key: {{ $secret.Key }}
-        {{ end }}
 `
 
 func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinitionStep *PipelineDefinitionStep) *PodDefinition {
