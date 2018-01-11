@@ -7,6 +7,12 @@ import (
 	"text/template"
 )
 
+type PodSecret struct {
+	Name  string
+	Store string
+	Key   string
+}
+
 type PodDefinition struct {
 	PodName     string
 	StepName    string
@@ -14,6 +20,7 @@ type PodDefinition struct {
 	BranchName  string
 	Namespace   string
 	Bucket      string
+	Secrets     []PodSecret
 
 	Step PipelineDefinitionStep
 }
@@ -113,18 +120,14 @@ spec:
         -
           name: OUTPUT_PATH
           value: /data/output
+        {{ range $index, $secret := .Secrets }}
         -
-          name: AWS_ACCESS_KEY_ID
+          name: {{ $secret.Name }}
           valueFrom:
             secretKeyRef:
-              name: aws-credentials
-              key: aws-access-key-id
-        -
-          name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: aws-secret-access-key
+              name: {{ $secret.Store }}
+              key: {{ $secret.Key }}
+        {{ end }}
 `
 
 func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinitionStep *PipelineDefinitionStep) *PodDefinition {
@@ -132,6 +135,11 @@ func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinition
 	branchName := sanitizeName(pipelineDefinitionStep.Branch)
 	stepVersion := sanitizeName(pipelineDefinitionStep.Version)
 	podName := fmt.Sprintf("%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), stepName, branchName)
+	secrets := []PodSecret{
+		PodSecret{Name: "AWS_ACCESS_KEY_ID", Store: "aws-credentials", Key: "aws-access-key-id"},
+		PodSecret{Name: "AWS_SECRET_ACCESS_KEY", Store: "aws-credentials", Key: "aws-secret-access-key"},
+	}
+
 	return &PodDefinition{
 		PodName:     podName,
 		Namespace:   pipelineDefinition.Namespace,
@@ -140,6 +148,7 @@ func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinition
 		StepName:    stepName,
 		StepVersion: stepVersion,
 		BranchName:  branchName,
+		Secrets:     secrets,
 	}
 
 }

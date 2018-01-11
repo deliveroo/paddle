@@ -29,6 +29,7 @@ type PipelineDefinition struct {
 	Bucket    string                   `yaml:"bucket"`
 	Namespace string                   `yaml:"namespace"`
 	Steps     []PipelineDefinitionStep `yaml:"steps"`
+	Secrets   []string
 }
 
 func parsePipeline(data []byte) *PipelineDefinition {
