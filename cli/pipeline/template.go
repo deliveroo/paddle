@@ -70,18 +70,6 @@ spec:
         -
           name: OUTPUT_PATH
           value: /data/output
-        -
-          name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials-training
-              key: aws-access-key-id
-        -
-          name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials-training
-              key: aws-secret-access-key
         {{ range $index, $secret := .Secrets }}
         -
           name: {{ $secret.Name }}
@@ -128,6 +116,14 @@ spec:
         -
           name: OUTPUT_PATH
           value: /data/output
+        {{ range $index, $secret := .Secrets }}
+        -
+          name: {{ $secret.Name }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secret.Store }}
+              key: {{ $secret.Key }}
+        {{ end }}
 `
 
 func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinitionStep *PipelineDefinitionStep) *PodDefinition {
