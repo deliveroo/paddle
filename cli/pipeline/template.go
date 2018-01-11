@@ -82,6 +82,14 @@ spec:
             secretKeyRef:
               name: aws-credentials-training
               key: aws-secret-access-key
+        {{ range $index, $secret := .Secrets }}
+        -
+          name: {{ $secret.Name }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secret.Store }}
+              key: {{ $secret.Key }}
+        {{ end }}
     -
       name: paddle
       image: "219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest"
@@ -120,14 +128,6 @@ spec:
         -
           name: OUTPUT_PATH
           value: /data/output
-        {{ range $index, $secret := .Secrets }}
-        -
-          name: {{ $secret.Name }}
-          valueFrom:
-            secretKeyRef:
-              name: {{ $secret.Store }}
-              key: {{ $secret.Key }}
-        {{ end }}
 `
 
 func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinitionStep *PipelineDefinitionStep) *PodDefinition {
