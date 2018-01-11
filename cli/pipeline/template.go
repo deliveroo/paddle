@@ -7,6 +7,12 @@ import (
 	"text/template"
 )
 
+type PodSecret struct {
+	Name  string
+	Store string
+	Key   string
+}
+
 type PodDefinition struct {
 	PodName     string
 	StepName    string
@@ -14,6 +20,7 @@ type PodDefinition struct {
 	BranchName  string
 	Namespace   string
 	Bucket      string
+	Secrets     []PodSecret
 
 	Step PipelineDefinitionStep
 }
@@ -75,6 +82,14 @@ spec:
             secretKeyRef:
               name: aws-credentials-training
               key: aws-secret-access-key
+        {{ range $index, $secret := .Secrets }}
+        -
+          name: {{ $secret.Name }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ $secret.Store }}
+              key: {{ $secret.Key }}
+        {{ end }}
     -
       name: paddle
       image: "219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest"
@@ -132,6 +147,7 @@ func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinition
 	branchName := sanitizeName(pipelineDefinitionStep.Branch)
 	stepVersion := sanitizeName(pipelineDefinitionStep.Version)
 	podName := fmt.Sprintf("%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), stepName, branchName)
+
 	return &PodDefinition{
 		PodName:     podName,
 		Namespace:   pipelineDefinition.Namespace,
@@ -140,6 +156,7 @@ func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinition
 		StepName:    stepName,
 		StepVersion: stepVersion,
 		BranchName:  branchName,
+		Secrets:     []PodSecret{},
 	}
 
 }
