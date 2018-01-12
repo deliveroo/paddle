@@ -159,6 +159,8 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 					TailLogs(ctx, clientset, e.Pod, e.Container)
 				}
 			case Deleted:
+				log.Println("[paddle] Pod deleted")
+				return errors.New("Pod was deleted unexpectedly.")
 			case Removed:
 				log.Printf("[paddle] Container removed: %s", e.Container)
 				continue
