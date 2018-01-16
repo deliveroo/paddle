@@ -47,6 +47,7 @@ spec:
     -
       name: main
       image: "{{ .Step.Image }}"
+      imagePullPolicy: Always
       volumeMounts:
         -
           name: shared-data
