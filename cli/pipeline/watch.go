@@ -49,8 +49,10 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 
 	parsePodStatus := func(pod *v1.Pod) {
 		if pod.Status.Phase == v1.PodSucceeded {
+			log.Println("Status: succeded")
 			out <- WatchEvent{Completed, pod, "", ""}
 		} else if pod.Status.Phase == v1.PodFailed {
+			log.Println("Status: failed")
 			out <- WatchEvent{Failed, pod, "", ""}
 		} else {
 			for _, container := range pod.Status.ContainerStatuses {
@@ -106,8 +108,14 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 			select {
 			case <-time.After(watchPollInterval):
 				pod, err := c.CoreV1().Pods(watchPod.Namespace).Get(watchPod.Name, metav1.GetOptions{})
-				if err != nil {
+				if pod != nil {
 					parsePodStatus(pod)
+				} else {
+					if err != nil {
+						log.Println("Error polling pod status: %s", err.Error())
+					} else {
+						log.Println("No pod status")
+					}
 				}
 			case <-ctx.Done():
 				return

@@ -15,6 +15,7 @@ func TestCompileTemplate(t *testing.T) {
 	pipeline := parsePipeline(data)
 
 	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
+
 	stepPodBuffer := podDefinition.compile()
 
 	pod := &v1.Pod{}
