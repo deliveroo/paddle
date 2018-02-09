@@ -26,7 +26,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
 	"log"
-	"strings"
 	"time"
 )
 
@@ -35,6 +34,7 @@ type runCmdFlagsStruct struct {
 	BucketName         string
 	TailLogs           bool
 	Secrets            []string
+	Env                []string
 	DeletePollInterval time.Duration
 	StartTimeout       time.Duration
 }
@@ -69,6 +69,7 @@ func init() {
 	runCmd.Flags().StringVarP(&runCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
 	runCmd.Flags().BoolVarP(&runCmdFlags.TailLogs, "logs", "l", true, "Tail logs")
 	runCmd.Flags().StringSliceVarP(&runCmdFlags.Secrets, "secret", "S", []string{}, "Secret to pull into the environment (in the form ENV_VAR:secret_store:key_name)")
+	runCmd.Flags().StringSliceVarP(&runCmdFlags.Env, "env", "e", []string{}, "Environment variables to set (in the form name:value)")
 	runCmdFlags.DeletePollInterval = defaultDeletePollInterval
 	runCmdFlags.StartTimeout = defaultStartTimeout
 
@@ -106,15 +107,8 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *runCmdFlagsStruct) error {
 	log.Printf("[paddle] Running step %s", step.Step)
 	podDefinition := NewPodDefinition(pipeline, step)
-	for _, secret := range flags.Secrets {
-		secretParts := strings.Split(secret, ":")
-
-		podDefinition.Secrets = append(podDefinition.Secrets, PodSecret{
-			Name:  secretParts[0],
-			Store: secretParts[1],
-			Key:   secretParts[2],
-		})
-	}
+	podDefinition.parseSecrets(flags.Secrets)
+	podDefinition.parseEnv(flags.Env)
 
 	stepPodBuffer := podDefinition.compile()
 	pod := &v1.Pod{}
