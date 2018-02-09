@@ -13,6 +13,11 @@ type PodSecret struct {
 	Key   string
 }
 
+type PodEnvVariable struct {
+	Name  string
+	Value string
+}
+
 type PodDefinition struct {
 	PodName     string
 	StepName    string
@@ -21,6 +26,7 @@ type PodDefinition struct {
 	Namespace   string
 	Bucket      string
 	Secrets     []PodSecret
+	Env         []PodEnvVariable
 
 	Step PipelineDefinitionStep
 }
@@ -90,6 +96,11 @@ spec:
               name: {{ $secret.Store }}
               key: {{ $secret.Key }}
         {{ end }}
+        {{ range $index, $var := .Env }}
+        -
+          name: {{ $var.Name }}
+          value: {{ $var.Value }}
+        {{ end }}
     -
       name: paddle
       image: "219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest"
@@ -158,7 +169,6 @@ func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinition
 		BranchName:  branchName,
 		Secrets:     []PodSecret{},
 	}
-
 }
 
 func (p PodDefinition) compile() *bytes.Buffer {
@@ -172,6 +182,29 @@ func (p PodDefinition) compile() *bytes.Buffer {
 		panic(err.Error())
 	}
 	return buffer
+}
+
+func (p *PodDefinition) parseSecrets(secrets []string) {
+	for _, secret := range secrets {
+		secretParts := strings.Split(secret, ":")
+
+		p.Secrets = append(p.Secrets, PodSecret{
+			Name:  secretParts[0],
+			Store: secretParts[1],
+			Key:   secretParts[2],
+		})
+	}
+}
+
+func (p *PodDefinition) parseEnv(env []string) {
+	for _, v := range env {
+		varParts := strings.Split(v, ":")
+
+		p.Env = append(p.Env, PodEnvVariable{
+			Name:  varParts[0],
+			Value: varParts[1],
+		})
+	}
 }
 
 func sanitizeName(name string) string {
