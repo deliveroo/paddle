@@ -53,6 +53,7 @@ spec:
     -
       name: main
       image: "{{ .Step.Image }}"
+      imagePullPolicy: Always
       volumeMounts:
         -
           name: shared-data
@@ -104,6 +105,7 @@ spec:
     -
       name: paddle
       image: "219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest"
+      imagePullPolicy: Always
       volumeMounts:
         -
           name: shared-data
