@@ -4,6 +4,7 @@ import (
 	"gopkg.in/yaml.v2"
 	"log"
 	"regexp"
+	"strings"
 )
 
 type PipelineDefinitionStep struct {
@@ -48,4 +49,15 @@ func parsePipeline(data []byte) *PipelineDefinition {
 	}
 
 	return &pipeline
+}
+
+func (p *PipelineDefinitionStep) OverrideTag(tag string) {
+	if tag != "" {
+		currentParts := strings.Split(p.Image, ":")
+		parts := []string{
+			currentParts[0],
+			tag,
+		}
+		p.Image = strings.Join(parts, ":")
+	}
 }
