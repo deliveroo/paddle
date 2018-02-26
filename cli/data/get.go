@@ -30,6 +30,8 @@ import (
 var getBranch string
 var getCommitPath string
 
+const s3Retries = 3
+
 var getCmd = &cobra.Command{
 	Use:   "get [version] [destination path]",
 	Short: "Fetch data from S3",
@@ -79,10 +81,7 @@ func copyPathToDestination(source S3Path, destination string) {
 func readHEAD(session *session.Session, source S3Path) string {
 	svc := s3.New(session)
 
-	out, err := svc.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(source.bucket),
-		Key:    aws.String(source.path),
-	})
+	out, err := getObject(svc, aws.String(source.bucket), aws.String(source.path))
 
 	if err != nil {
 		exitErrorf("%v", err)
@@ -124,10 +123,7 @@ func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, dest
 			fmt.Println("Got a directory")
 			continue
 		}
-		out, err := s3Client.GetObject(&s3.GetObjectInput{
-			Bucket: aws.String(source.bucket),
-			Key:    key.Key,
-		})
+		out, err := getObject(s3Client, aws.String(source.bucket), key.Key)
 		if err != nil {
 			exitErrorf("%v", err)
 		}
@@ -146,4 +142,21 @@ func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, dest
 		out.Body.Close()
 		destFile.Close()
 	}
+}
+
+func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutput, error) {
+	retries := s3Retries
+	var err error = nil
+	for retries > 0 {
+		out, err := s3Client.GetObject(&s3.GetObjectInput{
+			Bucket: bucket,
+			Key:    key,
+		})
+		if err == nil {
+			return out, nil
+		} else {
+			retries--
+		}
+	}
+	return nil, err
 }
