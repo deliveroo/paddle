@@ -1,3 +1,3 @@
 package cli
 //go:generate bash ./generate_version.sh
-var PaddleVersion = "0.8.1"
+var PaddleVersion = "0.8.2"
