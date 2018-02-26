@@ -25,12 +25,14 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var getBranch string
 var getCommitPath string
 
-const s3Retries = 3
+const s3Retries = 10
+const s3RetriesSleep = 10 * time.Second
 
 var getCmd = &cobra.Command{
 	Use:   "get [version] [destination path]",
@@ -84,7 +86,7 @@ func readHEAD(session *session.Session, source S3Path) string {
 	out, err := getObject(svc, aws.String(source.bucket), aws.String(source.path))
 
 	if err != nil {
-		exitErrorf("%v", err)
+		exitErrorf("Error reading HEAD: %v", err)
 	}
 
 	buf := new(bytes.Buffer)
@@ -156,6 +158,10 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 			return out, nil
 		} else {
 			retries--
+			if retries > 0 {
+				fmt.Printf("Error fetching from S3, will retry in %v...	\n", s3RetriesSleep)
+				time.Sleep(s3RetriesSleep)
+			}
 		}
 	}
 	return nil, err
