@@ -152,8 +152,9 @@ func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, dest
 func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutput, error) {
 	retries := s3Retries
 	var err error = nil
+	var out *s3.GetObjectOutput = nil
 	for retries > 0 {
-		out, err := s3Client.GetObject(&s3.GetObjectInput{
+		out, err = s3Client.GetObject(&s3.GetObjectInput{
 			Bucket: bucket,
 			Key:    key,
 		})
@@ -162,7 +163,7 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 		} else {
 			retries--
 			if retries > 0 {
-				fmt.Printf("Error fetching from S3, will retry in %v...	\n", s3RetriesSleep)
+				fmt.Printf("Error fetching from S3: %s; will retry in %v...	\n", err.Error(), s3RetriesSleep)
 				time.Sleep(s3RetriesSleep)
 			}
 		}
