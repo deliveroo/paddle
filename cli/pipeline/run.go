@@ -219,9 +219,7 @@ func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *
 				return true, err
 			}
 		}
-		if deleting {
-			log.Print("[paddle] .")
-		} else {
+		if !deleting {
 			log.Printf("[paddle] deleting pod %s", podDefinition.PodName)
 			deleting = true
 		}
