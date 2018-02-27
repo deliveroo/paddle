@@ -73,7 +73,10 @@ func copyPathToDestination(source S3Path, destination string) {
 	 */
 	if source.Basename() == "HEAD" {
 		latestFolder := readHEAD(session, source)
-		source.path = strings.Replace(source.path, "HEAD", latestFolder, 1)
+		source.path = latestFolder
+	}
+	if !strings.HasSuffix(source.path, "/") {
+		source.path += "/"
 	}
 
 	fmt.Println("Copying " + source.path + " to " + destination)
