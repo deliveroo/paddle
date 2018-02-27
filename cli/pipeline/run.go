@@ -185,8 +185,17 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 				return errors.New(msg)
 			}
 		case <-ctx.Done():
+			pod, _ := pods.Get(podDefinition.PodName, metav1.GetOptions{})
+			reason := "Timeout waiting for pod to start. Cluster might not have sufficient resources."
+			if pod != nil {
+				for _, container := range pod.Status.ContainerStatuses {
+					if container.State.Waiting != nil {
+						reason = container.State.Waiting.Message
+					}
+				}
+			}
 			pods.Delete(podDefinition.PodName, &metav1.DeleteOptions{})
-			return errors.New("Timeout waiting for pod to start. Cluster might not have sufficient resources.")
+			return errors.New(reason)
 		}
 	}
 
