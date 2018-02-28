@@ -52,8 +52,18 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 			log.Println("Status: succeded")
 			out <- WatchEvent{Completed, pod, "", ""}
 		} else if pod.Status.Phase == v1.PodFailed {
-			log.Println("Status: failed")
-			out <- WatchEvent{Failed, pod, "", ""}
+			reason := ""
+			containerName := ""
+			for _, container := range pod.Status.ContainerStatuses {
+				if reason == "" && container.State.Terminated != nil {
+					containerName = container.Name
+					reason = container.State.Terminated.Reason
+					if container.State.Terminated.Message != "" {
+						reason += ": " + container.State.Terminated.Message
+					}
+				}
+			}
+			out <- WatchEvent{Failed, pod, containerName, reason}
 		} else {
 			for _, container := range pod.Status.ContainerStatuses {
 				if container.State.Running != nil {
