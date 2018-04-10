@@ -13,7 +13,7 @@ func TestParsePipeline(t *testing.T) {
 	pipeline := parsePipeline(data)
 
 	if len(pipeline.Steps) != 2 {
-		t.Errorf("excepted two steps, got %i", len(pipeline.Steps))
+		t.Errorf("excepted two steps, got %d", len(pipeline.Steps))
 	}
 
 	if pipeline.Bucket != "canoe-sample-pipeline" {

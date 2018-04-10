@@ -52,12 +52,12 @@ func TestWatch(t *testing.T) {
 	types := []WatchEventType{Added, Added, Completed, Removed, Failed}
 
 	if len(events) != len(types) {
-		t.Errorf("Expected %i events, got %i", len(types), len(events))
+		t.Errorf("Expected %d events, got %d", len(types), len(events))
 	}
 
 	for i, et := range types {
 		if events[i].Type != et {
-			t.Errorf("Event %i type is %v, expected %v", i, events[i].Type, et)
+			t.Errorf("Event %d type is %v, expected %v", i, events[i].Type, et)
 		}
 	}
 }
