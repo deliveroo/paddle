@@ -40,3 +40,43 @@ func TestOverrideTag(t *testing.T) {
 		t.Errorf("Image is %s", pipeline.Steps[0].Image)
 	}
 }
+
+func TestOverrideVersion(t *testing.T) {
+	data, err := ioutil.ReadFile("test/sample_steps_passing.yml")
+	if err != nil {
+		panic(err.Error())
+	}
+	pipeline := parsePipeline(data)
+
+	pipeline.Steps[0].OverrideVersion("")
+
+	if pipeline.Steps[0].Version != "version1" {
+		t.Errorf("Version is %s", pipeline.Steps[0].Version)
+	}
+
+	pipeline.Steps[0].OverrideVersion("foo")
+
+	if pipeline.Steps[0].Version != "foo" {
+		t.Errorf("Version is %s", pipeline.Steps[0].Version)
+	}
+}
+
+func TestOverrideBranch(t *testing.T) {
+	data, err := ioutil.ReadFile("test/sample_steps_passing.yml")
+	if err != nil {
+		panic(err.Error())
+	}
+	pipeline := parsePipeline(data)
+
+	pipeline.Steps[0].OverrideBranch("")
+
+	if pipeline.Steps[0].Branch != "master" {
+		t.Errorf("Branch is %s", pipeline.Steps[0].Branch)
+	}
+
+	pipeline.Steps[0].OverrideBranch("foo")
+
+	if pipeline.Steps[0].Branch != "foo" {
+		t.Errorf("Branch is %s", pipeline.Steps[0].Branch)
+	}
+}
