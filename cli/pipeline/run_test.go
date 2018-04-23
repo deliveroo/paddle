@@ -207,7 +207,7 @@ func TestRunPipelineStartTimeout(t *testing.T) {
 	if len(errors) != 2 {
 		t.Errorf("excepted two errors, actual %v", len(errors))
 	}
-	msg := "[paddle] [Timeout waiting for pod to start. Cluster might not have sufficient resources.]"
+	msg := "[paddle] [Timed out waiting for pod to start. Cluster might not have sufficient resources.]"
 	for _, err := range errors {
 		if err != msg {
 			t.Errorf("Expected timeout error, got %s", err)

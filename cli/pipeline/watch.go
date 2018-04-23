@@ -122,7 +122,7 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 					parsePodStatus(pod)
 				} else {
 					if err != nil {
-						log.Println("Error polling pod status: %s", err.Error())
+						log.Printf("Error polling pod status: %s\n", err.Error())
 					} else {
 						log.Println("No pod status")
 					}
