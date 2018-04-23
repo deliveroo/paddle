@@ -52,7 +52,7 @@ $ go test ./...
 
 ## Release
 
-In order to release a new version, set up github export GITHUB_TOKEN=[YOUR_TOKEN]
+In order to release a new version, set up github export GITHUB_TOKEN=[YOUR_TOKEN]. Make sure that you have goreleaser installed from [goreleaser.com](http://goreleaser.com).
 
 Ensure your git repo is clean. Then update VERSION (no need to commit it, it will be committed automatically), and run:
 

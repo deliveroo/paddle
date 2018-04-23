@@ -5,6 +5,7 @@ set -x
 
 die() { echo "$*" 1>&2 ; exit 1; }
 
+which goreleaser || die "Install goreleaser from http://goreleaser.com"
 VERSION=`cat VERSION | tr -d '\n'`
 git diff-index --quiet --cached HEAD -- || die "Index dirty, commit first"
 go generate ./cli
