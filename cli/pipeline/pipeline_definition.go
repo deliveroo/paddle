@@ -61,3 +61,15 @@ func (p *PipelineDefinitionStep) OverrideTag(tag string) {
 		p.Image = strings.Join(parts, ":")
 	}
 }
+
+func (p *PipelineDefinitionStep) OverrideVersion(version string) {
+	if version != "" {
+		p.Version = version
+	}
+}
+
+func (p *PipelineDefinitionStep) OverrideBranch(branch string) {
+	if branch != "" {
+		p.Branch = branch
+	}
+}

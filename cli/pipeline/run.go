@@ -33,6 +33,8 @@ type runCmdFlagsStruct struct {
 	StepName           string
 	BucketName         string
 	ImageTag           string
+	StepBranch         string
+	StepVersion        string
 	TailLogs           bool
 	Secrets            []string
 	Env                []string
@@ -69,6 +71,8 @@ func init() {
 	runCmd.Flags().StringVarP(&runCmdFlags.StepName, "step", "s", "", "Single step to execute")
 	runCmd.Flags().StringVarP(&runCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
 	runCmd.Flags().StringVarP(&runCmdFlags.ImageTag, "tag", "t", "", "Image tag (overrides the one defined in the pipeline)")
+	runCmd.Flags().StringVarP(&runCmdFlags.StepBranch, "step-branch", "B", "", "Step branch (overrides the one defined in the pipeline)")
+	runCmd.Flags().StringVarP(&runCmdFlags.StepVersion, "step-version", "V", "", "Step version (overrides the one defined in the pipeline)")
 	runCmd.Flags().BoolVarP(&runCmdFlags.TailLogs, "logs", "l", true, "Tail logs")
 	runCmd.Flags().StringSliceVarP(&runCmdFlags.Secrets, "secret", "S", []string{}, "Secret to pull into the environment (in the form ENV_VAR:secret_store:key_name)")
 	runCmd.Flags().StringSliceVarP(&runCmdFlags.Env, "env", "e", []string{}, "Environment variables to set (in the form name:value)")
@@ -101,6 +105,12 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 		}
 		if flags.ImageTag != "" {
 			step.OverrideTag(flags.ImageTag)
+		}
+		if flags.StepBranch != "" {
+			step.OverrideBranch(flags.StepBranch)
+		}
+		if flags.StepVersion != "" {
+			step.OverrideVersion(flags.StepVersion)
 		}
 		err = runPipelineStep(pipeline, &step, flags)
 		if err != nil {
