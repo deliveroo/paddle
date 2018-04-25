@@ -54,10 +54,14 @@ func TestOverrideVersion(t *testing.T) {
 		t.Errorf("Version is %s", pipeline.Steps[0].Version)
 	}
 
-	pipeline.Steps[0].OverrideVersion("foo")
+	pipeline.Steps[1].OverrideVersion("foo")
 
-	if pipeline.Steps[0].Version != "foo" {
-		t.Errorf("Version is %s", pipeline.Steps[0].Version)
+	if pipeline.Steps[1].Version != "foo" {
+		t.Errorf("Version is %s", pipeline.Steps[1].Version)
+	}
+
+	if pipeline.Steps[1].Inputs[0].Version != "foo" {
+		t.Errorf("Dependent input Version is %s", pipeline.Steps[1].Inputs[0].Version)
 	}
 }
 
@@ -74,9 +78,13 @@ func TestOverrideBranch(t *testing.T) {
 		t.Errorf("Branch is %s", pipeline.Steps[0].Branch)
 	}
 
-	pipeline.Steps[0].OverrideBranch("foo")
+	pipeline.Steps[1].OverrideBranch("foo")
 
-	if pipeline.Steps[0].Branch != "foo" {
-		t.Errorf("Branch is %s", pipeline.Steps[0].Branch)
+	if pipeline.Steps[1].Branch != "foo" {
+		t.Errorf("Branch is %s", pipeline.Steps[1].Branch)
+	}
+
+	if pipeline.Steps[1].Inputs[0].Branch != "foo" {
+		t.Errorf("Dependent input Branch is %s", pipeline.Steps[1].Inputs[0].Branch)
 	}
 }

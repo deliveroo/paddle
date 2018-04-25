@@ -65,11 +65,19 @@ func (p *PipelineDefinitionStep) OverrideTag(tag string) {
 func (p *PipelineDefinitionStep) OverrideVersion(version string) {
 	if version != "" {
 		p.Version = version
+
+		for i := range p.Inputs {
+			p.Inputs[i].Version = version
+		}
 	}
 }
 
 func (p *PipelineDefinitionStep) OverrideBranch(branch string) {
 	if branch != "" {
 		p.Branch = branch
+
+		for i := range p.Inputs {
+			p.Inputs[i].Branch = branch
+		}
 	}
 }
