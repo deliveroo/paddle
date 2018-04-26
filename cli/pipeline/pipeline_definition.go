@@ -62,22 +62,26 @@ func (p *PipelineDefinitionStep) OverrideTag(tag string) {
 	}
 }
 
-func (p *PipelineDefinitionStep) OverrideVersion(version string) {
+func (p *PipelineDefinitionStep) OverrideVersion(version string, overrideInputs bool) {
 	if version != "" {
 		p.Version = version
 
-		for i := range p.Inputs {
-			p.Inputs[i].Version = version
+		if overrideInputs {
+			for i := range p.Inputs {
+				p.Inputs[i].Version = version
+			}
 		}
 	}
 }
 
-func (p *PipelineDefinitionStep) OverrideBranch(branch string) {
+func (p *PipelineDefinitionStep) OverrideBranch(branch string, overrideInputs bool) {
 	if branch != "" {
 		p.Branch = branch
 
-		for i := range p.Inputs {
-			p.Inputs[i].Branch = branch
+		if overrideInputs {
+			for i := range p.Inputs {
+				p.Inputs[i].Branch = branch
+			}
 		}
 	}
 }
