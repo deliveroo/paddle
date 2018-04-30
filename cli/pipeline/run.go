@@ -35,6 +35,7 @@ type runCmdFlagsStruct struct {
 	ImageTag           string
 	StepBranch         string
 	StepVersion        string
+	OverrideInputs     bool
 	TailLogs           bool
 	Secrets            []string
 	Env                []string
@@ -74,6 +75,7 @@ func init() {
 	runCmd.Flags().StringVarP(&runCmdFlags.StepBranch, "step-branch", "B", "", "Step branch (overrides the one defined in the pipeline)")
 	runCmd.Flags().StringVarP(&runCmdFlags.StepVersion, "step-version", "V", "", "Step version (overrides the one defined in the pipeline)")
 	runCmd.Flags().BoolVarP(&runCmdFlags.TailLogs, "logs", "l", true, "Tail logs")
+	runCmd.Flags().BoolVarP(&runCmdFlags.OverrideInputs, "override-inputs", "I", false, "Override input version/branch (only makes sense to use with -B or -V)")
 	runCmd.Flags().StringSliceVarP(&runCmdFlags.Secrets, "secret", "S", []string{}, "Secret to pull into the environment (in the form ENV_VAR:secret_store:key_name)")
 	runCmd.Flags().StringSliceVarP(&runCmdFlags.Env, "env", "e", []string{}, "Environment variables to set (in the form name:value)")
 	runCmdFlags.DeletePollInterval = defaultDeletePollInterval
@@ -107,10 +109,10 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 			step.OverrideTag(flags.ImageTag)
 		}
 		if flags.StepBranch != "" {
-			step.OverrideBranch(flags.StepBranch)
+			step.OverrideBranch(flags.StepBranch, flags.OverrideInputs)
 		}
 		if flags.StepVersion != "" {
-			step.OverrideVersion(flags.StepVersion)
+			step.OverrideVersion(flags.StepVersion, flags.OverrideInputs)
 		}
 		err = runPipelineStep(pipeline, &step, flags)
 		if err != nil {
