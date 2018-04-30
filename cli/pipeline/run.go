@@ -109,11 +109,12 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 			step.OverrideTag(flags.ImageTag)
 		}
 		if flags.StepBranch != "" {
-			step.OverrideBranch(flags.StepBranch, flags.OverrideInputs)
+			step.OverrideBranch(flags.StepBranch, flags)
 		}
 		if flags.StepVersion != "" {
-			step.OverrideVersion(flags.StepVersion, flags.OverrideInputs)
+			step.OverrideVersion(flags.StepVersion, flags)
 		}
+    log.Printf("%+v", flags.Env)
 		err = runPipelineStep(pipeline, &step, flags)
 		if err != nil {
 			logFatalf("[paddle] %s", err.Error())
