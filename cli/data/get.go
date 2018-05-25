@@ -163,7 +163,7 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 		} else {
 			retries--
 			if retries > 0 {
-				fmt.Printf("Error fetching from S3: %s; will retry in %v...	\n", err.Error(), s3RetriesSleep)
+				fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", *key, err.Error(), s3RetriesSleep)
 				time.Sleep(s3RetriesSleep)
 			}
 		}
