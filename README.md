@@ -60,6 +60,15 @@ Ensure your git repo is clean. Then update VERSION (no need to commit it, it wil
 $ ./release.sh
 ```
 
+To also release a new version of the `paddlecontainer` you have to do the following:
+
+```
+$ git clone git@github.com:deliveroo/roo-kube.git
+$ cd roo-kube/paddlecontainer
+```
+
+Then follow the instructions from here: https://github.com/deliveroo/roo-kube/blob/master/docker-publish-image-README.md#buildingpushing-docker-images
+
 ## Usage
 
 ```
