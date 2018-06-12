@@ -159,7 +159,7 @@ func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinition
 	stepName := sanitizeName(pipelineDefinitionStep.Step)
 	branchName := sanitizeName(pipelineDefinitionStep.Branch)
 	stepVersion := sanitizeName(pipelineDefinitionStep.Version)
-	podName := fmt.Sprintf("%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), stepName, branchName)
+	podName := fmt.Sprintf("%s-%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), sanitizeName(pipelineDefinitionStep.Version), stepName, branchName)
 
 	return &PodDefinition{
 		PodName:     podName,

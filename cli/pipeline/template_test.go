@@ -21,7 +21,7 @@ func TestCompileTemplate(t *testing.T) {
 	pod := &v1.Pod{}
 	yaml.NewYAMLOrJSONDecoder(stepPodBuffer, 4096).Decode(pod)
 
-	if pod.Name != "sample-steps-passing-step1-master" {
+	if pod.Name != "sample-steps-passing-version1-step1-master" {
 		t.Errorf("Pod name is %s", pod.Name)
 	}
 
