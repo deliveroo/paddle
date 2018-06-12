@@ -109,10 +109,10 @@ func TestRunPipelineSuccess(t *testing.T) {
 
 	runPipeline("test/sample_steps_passing.yml", testRunFlags)
 
-	expectPods := [2]string{"sample-steps-passing-step1-master", "sample-steps-passing-step2-master"}
+	expectPods := [2]string{"sample-steps-passing-version1-step1-master", "sample-steps-passing-version1a-step2-master"}
 
 	for _, p := range expectPods {
-		if deleted["sample-steps-passing-step1-master"] != 2 {
+		if deleted[p] != 2 {
 			t.Errorf("excepted delete of "+p+" to be called twice, got %i", deleted[p])
 		}
 		if created[p] != 1 {
