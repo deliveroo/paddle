@@ -128,24 +128,26 @@ func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, dest
 			fmt.Println("Got a directory")
 			continue
 		}
-		out, err := getObject(s3Client, aws.String(source.bucket), key.Key)
-		if err != nil {
-			exitErrorf("%v", err)
-		}
-		destFilePath := destination + "/" + strings.TrimPrefix(destFilename, source.Dirname()+"/")
-		err = os.MkdirAll(filepath.Dir(destFilePath), 0777)
-		fmt.Print(destFilePath)
-		destFile, err := os.Create(destFilePath)
-		if err != nil {
-			exitErrorf("%v", err)
-		}
-		bytes, err := io.Copy(destFile, out.Body)
-		if err != nil {
-			exitErrorf("%v", err)
-		}
-		fmt.Printf(" -> %d bytes\n", bytes)
-		out.Body.Close()
-		destFile.Close()
+		go func(key *string) {
+			out, err := getObject(s3Client, aws.String(source.bucket), key)
+			if err != nil {
+				exitErrorf("%v", err)
+			}
+			destFilePath := destination + "/" + strings.TrimPrefix(destFilename, source.Dirname()+"/")
+			err = os.MkdirAll(filepath.Dir(destFilePath), 0777)
+			fmt.Print(destFilePath)
+			destFile, err := os.Create(destFilePath)
+			if err != nil {
+				exitErrorf("%v", err)
+			}
+			bytes, err := io.Copy(destFile, out.Body)
+			if err != nil {
+				exitErrorf("%v", err)
+			}
+			fmt.Printf(" -> %d bytes\n", bytes)
+			out.Body.Close()
+			destFile.Close()
+		}(key.Key)
 	}
 }
 
