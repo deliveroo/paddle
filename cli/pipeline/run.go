@@ -218,9 +218,11 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
 	pods := clientset.CoreV1().Pods(podDefinition.Namespace)
 	deleting := false
+	var gracePeriod int64
+	opts := metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod}
 	err := wait.PollImmediate(flags.DeletePollInterval, deleteTimeout, func() (bool, error) {
 		var err error
-		err = pods.Delete(podDefinition.PodName, &metav1.DeleteOptions{})
+		err = pods.Delete(podDefinition.PodName, &opts)
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				if deleting {
