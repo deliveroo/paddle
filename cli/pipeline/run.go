@@ -128,6 +128,10 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	podDefinition.parseSecrets(flags.Secrets)
 	podDefinition.parseEnv(flags.Env)
 
+	if podDefinition.needsVolume() {
+		createVolumeClaim(clientset, podDefinition, flags)
+	}
+
 	stepPodBuffer := podDefinition.compile()
 	pod := &v1.Pod{}
 	yaml.NewYAMLOrJSONDecoder(stepPodBuffer, 4096).Decode(pod)
@@ -160,6 +164,8 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		}
 	}()
 
+	removed := map[string]bool{}
+
 	for {
 		select {
 		case e := <-watch:
@@ -174,7 +180,10 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 				log.Println("[paddle] Pod deleted")
 				return errors.New("Pod was deleted unexpectedly.")
 			case Removed:
-				log.Printf("[paddle] Container removed: %s", e.Container)
+				if !removed[e.Container] {
+					log.Printf("[paddle] Container removed: %s", e.Container)
+				}
+				removed[e.Container] = true
 				continue
 			case Completed:
 				log.Printf("[paddle] Pod execution completed")
@@ -241,4 +250,46 @@ func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *
 		return false, nil
 	})
 	return err
+}
+
+func createVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
+	log.Printf("[paddle] Creating volume claim for %s", podDefinition.PodName)
+	claim := &v1.PersistentVolumeClaim{}
+	claimBuffer := podDefinition.compileVolumeClaim()
+	yaml.NewYAMLOrJSONDecoder(claimBuffer, 4096).Decode(claim)
+
+	claims := clientset.CoreV1().PersistentVolumeClaims(podDefinition.Namespace)
+
+	deleting := false
+	var gracePeriod int64
+	opts := metav1.DeleteOptions{GracePeriodSeconds: &gracePeriod}
+	err := wait.PollImmediate(flags.DeletePollInterval, deleteTimeout, func() (bool, error) {
+		var err error
+		err = claims.Delete(claim.Name, &opts)
+		if err != nil {
+			if k8errors.IsNotFound(err) {
+				if deleting {
+					log.Printf("[paddle] Deleted volume clain %s", claim.Name)
+				}
+				return true, nil
+			} else {
+				return true, err
+			}
+		}
+		if !deleting {
+			log.Printf("[paddle] Deleting volume claim %s", claim.Name)
+			deleting = true
+		}
+		return false, nil
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = claims.Create(claim)
+	if err != nil {
+		return err
+	}
+	log.Printf("[paddle] Created volume claim %s", claim.Name)
+	return nil
 }

@@ -29,25 +29,6 @@ func TestCompileTemplate(t *testing.T) {
 	if pod.Spec.Containers[0].Image != pipeline.Steps[0].Image {
 		t.Errorf("First image is %s", pod.Spec.Containers[0].Image)
 	}
-
-	if !pod.Spec.Containers[0].Resources.Requests.StorageEphemeral().IsZero() {
-		t.Errorf("Storage requirements is %v, expected", pod.Spec.Containers[0].Resources.Requests.StorageEphemeral())
-	}
-
-	podDefinition = NewPodDefinition(pipeline, &pipeline.Steps[1])
-
-	stepPodBuffer = podDefinition.compile()
-
-	pod = &v1.Pod{}
-	yaml.NewYAMLOrJSONDecoder(stepPodBuffer, 4096).Decode(pod)
-
-	if pod.Spec.Containers[0].Resources.Requests.StorageEphemeral().Value() != int64(1048576000) {
-		t.Errorf("Storage requirements is %v, expected %v", pod.Spec.Containers[1].Resources.Requests.StorageEphemeral().Value(), pipeline.Steps[1].Resources.Storage)
-	}
-
-	if pod.Spec.Containers[1].Resources.Requests.StorageEphemeral().Value() != int64(1048576000) {
-		t.Errorf("Storage requirements is %v, expected %v", pod.Spec.Containers[1].Resources.Requests.StorageEphemeral().Value(), pipeline.Steps[1].Resources.Storage)
-	}
 }
 
 func TestSecrets(t *testing.T) {

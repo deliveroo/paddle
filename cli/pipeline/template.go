@@ -31,6 +31,10 @@ type PodDefinition struct {
 	Step PipelineDefinitionStep
 }
 
+func (d *PodDefinition) needsVolume() bool {
+	return d.Step.Resources.Storage != 0
+}
+
 const podTemplate = `
 apiVersion: v1
 kind: Pod
@@ -47,8 +51,13 @@ spec:
   volumes:
     -
       name: shared-data
+      {{ if ne .Step.Resources.Storage 0 }}
+      persistentVolumeClaim:
+        claimName: {{ .PodName }}-volume-claim
+      {{ else }}
       emptyDir:
         medium: ''
+      {{ end }}
   containers:
     -
       name: main
@@ -62,10 +71,6 @@ spec:
         limits:
           cpu: "{{ .Step.Resources.CPU }}"
           memory: "{{ .Step.Resources.Memory }}"
-        {{ if ne .Step.Resources.Storage 0 }}
-        requests:
-          ephemeral-storage: {{ .Step.Resources.Storage }}Mi
-        {{ end }}
       command:
         - "/bin/sh"
         - "-c"
@@ -114,11 +119,6 @@ spec:
         -
           name: shared-data
           mountPath: /data
-      {{ if ne .Step.Resources.Storage 0 }}
-      resources:
-        requests:
-          ephemeral-storage: {{ .Step.Resources.Storage }}Mi
-      {{ end }}
       command:
         - "/bin/sh"
         - "-c"
@@ -164,6 +164,20 @@ spec:
               key: aws-secret-access-key
 `
 
+const volumeTemplate = `
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: {{ .PodName }}-volume-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Step.Resources.Storage }}Mi
+  persistentVolumeReclaimPolicy: Delete
+`
+
 func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinitionStep *PipelineDefinitionStep) *PodDefinition {
 	stepName := sanitizeName(pipelineDefinitionStep.Step)
 	branchName := sanitizeName(pipelineDefinitionStep.Branch)
@@ -187,6 +201,16 @@ func (p PodDefinition) compile() *bytes.Buffer {
 		"sanitizeName": sanitizeName,
 	}
 	tmpl := template.Must(template.New("podTemplate").Funcs(fmap).Parse(podTemplate))
+	buffer := new(bytes.Buffer)
+	err := tmpl.Execute(buffer, p)
+	if err != nil {
+		panic(err.Error())
+	}
+	return buffer
+}
+
+func (p PodDefinition) compileVolumeClaim() *bytes.Buffer {
+	tmpl := template.Must(template.New("volumeTemplate").Parse(volumeTemplate))
 	buffer := new(bytes.Buffer)
 	err := tmpl.Execute(buffer, p)
 	if err != nil {
