@@ -1,10 +1,11 @@
 package pipeline
 
 import (
-	"gopkg.in/yaml.v2"
 	"log"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 type PipelineDefinitionStep struct {
@@ -20,8 +21,9 @@ type PipelineDefinitionStep struct {
 	} `yaml:"inputs"`
 	Commands  []string `yaml:"commands"`
 	Resources struct {
-		CPU    int    `yaml:"cpu"`
-		Memory string `yaml:"memory"`
+		CPU     int    `yaml:"cpu"`
+		Memory  string `yaml:"memory"`
+		Storage int    `yaml:"storage-mb"`
 	} `yaml:"resources"`
 }
 
