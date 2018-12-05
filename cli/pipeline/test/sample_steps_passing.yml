@@ -32,4 +32,5 @@ steps:
     resources:
       cpu: 2
       memory: 2Gi
+      storage-mb: 1000
 

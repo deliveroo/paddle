@@ -62,6 +62,10 @@ spec:
         limits:
           cpu: "{{ .Step.Resources.CPU }}"
           memory: "{{ .Step.Resources.Memory }}"
+        {{ if ne .Step.Resources.Storage 0 }}
+        requests:
+          ephemeral-storage: {{ .Step.Resources.Storage }}Mi
+        {{ end }}
       command:
         - "/bin/sh"
         - "-c"
@@ -110,6 +114,11 @@ spec:
         -
           name: shared-data
           mountPath: /data
+      {{ if ne .Step.Resources.Storage 0 }}
+      resources:
+        requests:
+          ephemeral-storage: {{ .Step.Resources.Storage }}Mi
+      {{ end }}
       command:
         - "/bin/sh"
         - "-c"

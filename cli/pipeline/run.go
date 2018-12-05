@@ -17,16 +17,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io/ioutil"
+	"log"
+	"time"
+
+	"github.com/spf13/cobra"
 	"k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
-	"log"
-	"time"
 )
 
 type runCmdFlagsStruct struct {
