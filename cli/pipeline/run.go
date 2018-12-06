@@ -261,7 +261,7 @@ func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *
 func createVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
 	err := deleteVolumeClaim(c, podDefinition, flags)
 	if err != nil {
-		log.Printf("[paddle] Unable to delete volume claim: %s. Attempting to continue.")
+		return err
 	}
 
 	log.Printf("[paddle] Creating volume claim for %s", podDefinition.PodName)
@@ -298,8 +298,6 @@ func deleteVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, fla
 					log.Printf("[paddle] Deleted volume claim %s", claim.Name)
 				}
 				return true, nil
-			} else if k8errors.IsForbidden(err) {
-				return true, nil // k8s is returning forbidden if the claim does not exists...
 			} else {
 				return true, err
 			}
