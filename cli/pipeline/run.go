@@ -298,6 +298,8 @@ func deleteVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, fla
 					log.Printf("[paddle] Deleted volume claim %s", claim.Name)
 				}
 				return true, nil
+			} else if k8errors.IsForbidden(err) {
+				return true, nil // k8s is returning forbidden if the claim does not exists...
 			} else {
 				return true, err
 			}
