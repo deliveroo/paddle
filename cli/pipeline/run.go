@@ -261,7 +261,7 @@ func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *
 func createVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
 	err := deleteVolumeClaim(c, podDefinition, flags)
 	if err != nil {
-		return err
+		log.Printf("[paddle] Unable to delete volume claim: %s. Attempting to continue.")
 	}
 
 	log.Printf("[paddle] Creating volume claim for %s", podDefinition.PodName)
