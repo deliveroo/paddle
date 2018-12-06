@@ -128,10 +128,6 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	podDefinition.parseSecrets(flags.Secrets)
 	podDefinition.parseEnv(flags.Env)
 
-	if podDefinition.needsVolume() {
-		createVolumeClaim(clientset, podDefinition, flags)
-	}
-
 	stepPodBuffer := podDefinition.compile()
 	pod := &v1.Pod{}
 	yaml.NewYAMLOrJSONDecoder(stepPodBuffer, 4096).Decode(pod)
@@ -140,6 +136,10 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	err := deleteAndWait(clientset, podDefinition, flags)
 	if err != nil {
 		return err
+	}
+
+	if podDefinition.needsVolume() {
+		createVolumeClaim(clientset, podDefinition, flags)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -256,6 +256,7 @@ func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *
 }
 
 func createVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
+	log.Printf("[paddle] Need volume claim for %s", podDefinition.PodName)
 	err := deleteVolumeClaim(c, podDefinition, flags)
 	if err != nil {
 		return err
@@ -277,6 +278,7 @@ func createVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, fla
 }
 
 func deleteVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
+	log.Printf("[paddle] Checking volume claim for %s", podDefinition.PodName)
 	claim := &v1.PersistentVolumeClaim{}
 	claimBuffer := podDefinition.compileVolumeClaim()
 	yaml.NewYAMLOrJSONDecoder(claimBuffer, 4096).Decode(claim)
