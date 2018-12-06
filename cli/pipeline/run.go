@@ -187,6 +187,9 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 				continue
 			case Completed:
 				log.Printf("[paddle] Pod execution completed")
+				if podDefinition.needsVolume() {
+					deleteVolumeClaim(clientset, podDefinition, flags)
+				}
 				return nil
 			case Failed:
 				var msg string
@@ -253,7 +256,27 @@ func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *
 }
 
 func createVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
+	err := deleteVolumeClaim(c, podDefinition, flags)
+	if err != nil {
+		return err
+	}
+
 	log.Printf("[paddle] Creating volume claim for %s", podDefinition.PodName)
+	claim := &v1.PersistentVolumeClaim{}
+	claimBuffer := podDefinition.compileVolumeClaim()
+	yaml.NewYAMLOrJSONDecoder(claimBuffer, 4096).Decode(claim)
+
+	claims := clientset.CoreV1().PersistentVolumeClaims(podDefinition.Namespace)
+
+	_, err = claims.Create(claim)
+	if err != nil {
+		return err
+	}
+	log.Printf("[paddle] Created volume claim %s", claim.Name)
+	return nil
+}
+
+func deleteVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
 	claim := &v1.PersistentVolumeClaim{}
 	claimBuffer := podDefinition.compileVolumeClaim()
 	yaml.NewYAMLOrJSONDecoder(claimBuffer, 4096).Decode(claim)
@@ -269,7 +292,7 @@ func createVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, fla
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				if deleting {
-					log.Printf("[paddle] Deleted volume clain %s", claim.Name)
+					log.Printf("[paddle] Deleted volume claim %s", claim.Name)
 				}
 				return true, nil
 			} else {
@@ -285,11 +308,5 @@ func createVolumeClaim(c kubernetes.Interface, podDefinition *PodDefinition, fla
 	if err != nil {
 		return err
 	}
-
-	_, err = claims.Create(claim)
-	if err != nil {
-		return err
-	}
-	log.Printf("[paddle] Created volume claim %s", claim.Name)
 	return nil
 }
