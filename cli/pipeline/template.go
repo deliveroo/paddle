@@ -58,6 +58,10 @@ spec:
       emptyDir:
         medium: ''
       {{ end }}
+    -
+      name: docker-sock
+      hostPath:
+        path: /var/run/docker.sock
   containers:
     -
       name: main
@@ -67,6 +71,9 @@ spec:
         -
           name: shared-data
           mountPath: /data
+        -
+          name: docker-sock
+          mountPath: /var/run/docker.sock
       resources:
         limits:
           cpu: "{{ .Step.Resources.CPU }}"
