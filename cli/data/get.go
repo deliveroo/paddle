@@ -16,16 +16,17 @@ package data
 import (
 	"bytes"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var getBranch string
@@ -150,9 +151,12 @@ func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, dest
 }
 
 func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutput, error) {
+	var (
+		err error
+		out *s3.GetObjectOutput
+	)
+
 	retries := s3Retries
-	var err error = nil
-	var out *s3.GetObjectOutput = nil
 	for retries > 0 {
 		out, err = s3Client.GetObject(&s3.GetObjectInput{
 			Bucket: bucket,
@@ -160,12 +164,12 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 		})
 		if err == nil {
 			return out, nil
-		} else {
-			retries--
-			if retries > 0 {
-				fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", *key, err.Error(), s3RetriesSleep)
-				time.Sleep(s3RetriesSleep)
-			}
+		}
+
+		retries--
+		if retries > 0 {
+			fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", *key, err.Error(), s3RetriesSleep)
+			time.Sleep(s3RetriesSleep)
 		}
 	}
 	return nil, err
