@@ -15,26 +15,32 @@ package data
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var getBranch string
-var getCommitPath string
+var (
+	getBranch     string
+	getCommitPath string
+)
 
-const s3Retries = 10
-const s3RetriesSleep = 10 * time.Second
+const (
+	s3ParallelGets = 10
+	s3Retries      = 10
+	s3RetriesSleep = 10 * time.Second
+)
 
 var getCmd = &cobra.Command{
 	Use:   "get [version] [destination path]",
@@ -125,25 +131,46 @@ func copy(session *session.Session, source S3Path, destination string) {
 }
 
 func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, destination string) {
+	var (
+		wg  = new(sync.WaitGroup)
+		sem = make(chan struct{}, s3ParallelGets)
+	)
+
+	wg.Add(len(objects))
+
 	for _, key := range objects {
-		destFilename := *key.Key
-		if strings.HasSuffix(*key.Key, "/") {
-			fmt.Println("Got a directory")
-			continue
-		}
+		go process(s3Client, source, destination, *key.Key, sem, wg)
+	}
 
-		out, err := getObject(s3Client, aws.String(source.bucket), key.Key)
-		if err != nil {
-			exitErrorf("%v", err)
-		}
+	wg.Wait()
+}
 
-		target := destination + "/" + strings.TrimPrefix(destFilename, source.Dirname()+"/")
-		err := store(out, target)
-		if err != nil {
-			exitErrorf("%v", err)
-		}
+func process(s3Client *s3.S3, src S3Path, basePath string, filePath string, sem chan struct{}, wg *sync.WaitGroup) {
+	defer wg.Done()
 
-		out.Body.Close()
+	// block if N goroutines are already active (buffer full).
+	sem <- struct{}{}
+
+	defer func() {
+		// frees up buffer slot
+		<-sem
+	}()
+
+	if strings.HasSuffix(filePath, "/") {
+		fmt.Println("Got a directory")
+		return
+	}
+
+	out, err := getObject(s3Client, aws.String(src.bucket), &filePath)
+	if err != nil {
+		exitErrorf("%v", err)
+	}
+	defer out.Body.Close()
+
+	target := basePath + "/" + strings.TrimPrefix(filePath, src.Dirname()+"/")
+	err = store(out, target)
+	if err != nil {
+		exitErrorf("%v", err)
 	}
 }
 
@@ -173,11 +200,11 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 }
 
 func store(obj *s3.GetObjectOutput, destination string) error {
-	err = os.MkdirAll(filepath.Dir(destination), 0777)
+	err := os.MkdirAll(filepath.Dir(destination), 0777)
 
 	file, err := os.Create(destination)
 	if err != nil {
-		return errors.Wrapf(err, "%v")
+		return errors.WrapF(err, "%v")
 	}
 	defer file.Close()
 
