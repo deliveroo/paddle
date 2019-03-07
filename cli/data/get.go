@@ -15,6 +15,7 @@ package data
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -137,7 +138,10 @@ func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, dest
 		}
 
 		target := destination + "/" + strings.TrimPrefix(destFilename, source.Dirname()+"/")
-		store(out, target)
+		err := store(out, target)
+		if err != nil {
+			exitErrorf("%v", err)
+		}
 
 		out.Body.Close()
 	}
@@ -168,18 +172,18 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 	return nil, err
 }
 
-func store(obj *s3.GetObjectOutput, destination string) {
+func store(obj *s3.GetObjectOutput, destination string) error {
 	err = os.MkdirAll(filepath.Dir(destination), 0777)
 
 	file, err := os.Create(destination)
 	if err != nil {
-		exitErrorf("%v", err)
+		return errors.Wrapf(err, "%v")
 	}
 	defer file.Close()
 
 	bytes, err := io.Copy(file, out.Body)
 	if err != nil {
-		exitErrorf("%v", err)
+		return errors.Wrapf(err, "%v")
 	}
 
 	fmt.Printf("%s -> %d bytes\n", destination, bytes)
