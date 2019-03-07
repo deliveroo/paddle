@@ -8,20 +8,25 @@ import:
   - service/s3
   - service/s3/s3manager
 - package: github.com/mitchellh/go-homedir
+  version: ^1.1.0
 - package: github.com/spf13/afero
   version: ^1.0.0
 - package: github.com/spf13/cobra
-  version: ^0.0.1
+  version: ^0.0.3
 - package: github.com/spf13/viper
   version: ^1.0.0
 - package: k8s.io/client-go
   version: v6.0.0
 - package: github.com/gregjones/httpcache
 - package: github.com/imdario/mergo
+  version: ^0.3.7
 - package: gopkg.in/yaml.v2
+  version: ^2.2.2
 - package: github.com/davecgh/go-spew
   version: ^1.1.0
   subpackages:
   - spew
 - package: github.com/pkg/errors
   version: ^0.8.1
+- package: github.com/spf13/pflag
+  version: ^1.0.3
