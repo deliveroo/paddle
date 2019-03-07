@@ -105,20 +105,21 @@ func copy(session *session.Session, source S3Path, destination string) {
 	}
 	svc := s3.New(session)
 
-	truncatedListing := true
-
-	for truncatedListing {
+	for {
 		response, err := svc.ListObjectsV2(query)
-
 		if err != nil {
 			fmt.Println(err.Error())
 			return
 		}
+
 		copyToLocalFiles(svc, response.Contents, source, destination)
 
 		// Check if more results
 		query.ContinuationToken = response.NextContinuationToken
-		truncatedListing = *response.IsTruncated
+
+		if !(*response.IsTruncated) {
+			break
+		}
 	}
 }
 
