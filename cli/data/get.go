@@ -37,7 +37,7 @@ var (
 )
 
 const (
-	s3ParallelGets = 10
+	s3ParallelGets = 100
 	s3Retries      = 10
 	s3RetriesSleep = 10 * time.Second
 )
