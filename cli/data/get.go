@@ -69,7 +69,7 @@ $ paddle data get -b experimental --bucket roo-pipeline trained-model/version1 d
 
 func init() {
 	getCmd.Flags().StringVarP(&getBranch, "branch", "b", "master", "Branch to work on")
-	getCmd.Flags().StringVar(&getBucket, "bucket", viper.GetString("bucket"), "Branch to work on")
+	getCmd.Flags().StringVar(&getBucket, "bucket", viper.GetString("bucket"), "Bucket to use")
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
 }
 

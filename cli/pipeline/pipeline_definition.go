@@ -18,6 +18,7 @@ type PipelineDefinitionStep struct {
 		Version string `yaml:"version"`
 		Branch  string `yaml:"branch"`
 		Path    string `yaml:"path"`
+		Bucket  string `yaml:"bucket"`
 	} `yaml:"inputs"`
 	Commands  []string `yaml:"commands"`
 	Resources struct {
