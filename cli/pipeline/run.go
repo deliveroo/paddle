@@ -40,6 +40,7 @@ type runCmdFlagsStruct struct {
 	TailLogs           bool
 	Secrets            []string
 	Env                []string
+	BucketOverrides    []string
 	DeletePollInterval time.Duration
 	StartTimeout       time.Duration
 }
@@ -79,6 +80,7 @@ func init() {
 	runCmd.Flags().BoolVarP(&runCmdFlags.OverrideInputs, "override-inputs", "I", false, "Override input version/branch (only makes sense to use with -B or -V)")
 	runCmd.Flags().StringSliceVarP(&runCmdFlags.Secrets, "secret", "S", []string{}, "Secret to pull into the environment (in the form ENV_VAR:secret_store:key_name)")
 	runCmd.Flags().StringSliceVarP(&runCmdFlags.Env, "env", "e", []string{}, "Environment variables to set (in the form name:value)")
+	runCmd.Flags().StringSliceVar(&runCmdFlags.BucketOverrides, "replace-bucket", []string{}, "Override input bucket names (in the form original_bucket_name:new_bucket_name)")
 	runCmdFlags.DeletePollInterval = defaultDeletePollInterval
 	runCmdFlags.StartTimeout = defaultStartTimeout
 
@@ -127,6 +129,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	podDefinition := NewPodDefinition(pipeline, step)
 	podDefinition.parseSecrets(flags.Secrets)
 	podDefinition.parseEnv(flags.Env)
+	podDefinition.setBucketOverrides(flags.BucketOverrides)
 
 	stepPodBuffer := podDefinition.compile()
 	pod := &v1.Pod{}
