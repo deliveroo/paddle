@@ -34,6 +34,7 @@ import (
 var (
 	getBranch     string
 	getCommitPath string
+	getBucket     string
 )
 
 const (
@@ -50,15 +51,15 @@ var getCmd = &cobra.Command{
 
 Example:
 
-$ paddle data get -b experimental trained-model/version1 dest/path
+$ paddle data get -b experimental --bucket roo-pipeline trained-model/version1 dest/path
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		if !viper.IsSet("bucket") {
+		if getBucket == "" {
 			exitErrorf("Bucket not defined. Please define 'bucket' in your config file.")
 		}
 
 		source := S3Path{
-			bucket: viper.GetString("bucket"),
+			bucket: getBucket,
 			path:   fmt.Sprintf("%s/%s/%s", args[0], getBranch, getCommitPath),
 		}
 
@@ -68,6 +69,7 @@ $ paddle data get -b experimental trained-model/version1 dest/path
 
 func init() {
 	getCmd.Flags().StringVarP(&getBranch, "branch", "b", "master", "Branch to work on")
+	getCmd.Flags().StringVar(&getBucket, "bucket", viper.GetString("bucket"), "Bucket to use")
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
 }
 
