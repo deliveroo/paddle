@@ -19,14 +19,15 @@ type PodEnvVariable struct {
 }
 
 type PodDefinition struct {
-	PodName     string
-	StepName    string
-	StepVersion string
-	BranchName  string
-	Namespace   string
-	Bucket      string
-	Secrets     []PodSecret
-	Env         []PodEnvVariable
+	PodName         string
+	StepName        string
+	StepVersion     string
+	BranchName      string
+	Namespace       string
+	Bucket          string
+	Secrets         []PodSecret
+	Env             []PodEnvVariable
+	BucketOverrides map[string]string
 
 	Step PipelineDefinitionStep
 }
@@ -192,21 +193,22 @@ func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinition
 	podName := fmt.Sprintf("%s-%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), sanitizeName(pipelineDefinitionStep.Version), stepName, branchName)
 
 	return &PodDefinition{
-		PodName:     podName,
-		Namespace:   pipelineDefinition.Namespace,
-		Step:        *pipelineDefinitionStep,
-		Bucket:      pipelineDefinition.Bucket,
-		StepName:    stepName,
-		StepVersion: stepVersion,
-		BranchName:  branchName,
-		Secrets:     []PodSecret{},
+		PodName:         podName,
+		Namespace:       pipelineDefinition.Namespace,
+		Step:            *pipelineDefinitionStep,
+		Bucket:          pipelineDefinition.Bucket,
+		StepName:        stepName,
+		StepVersion:     stepVersion,
+		BranchName:      branchName,
+		Secrets:         []PodSecret{},
+		BucketOverrides: map[string]string{},
 	}
 }
 
 func (p PodDefinition) compile() *bytes.Buffer {
 	fmap := template.FuncMap{
 		"sanitizeName": sanitizeName,
-		"bucketParam":  bucketParam,
+		"bucketParam":  p.bucketParam,
 	}
 	tmpl := template.Must(template.New("podTemplate").Funcs(fmap).Parse(podTemplate))
 	buffer := new(bytes.Buffer)
@@ -239,6 +241,13 @@ func (p *PodDefinition) parseSecrets(secrets []string) {
 	}
 }
 
+func (p *PodDefinition) setBucketOverrides(bucketOverrides []string) {
+	for _, bucketOverride := range bucketOverrides {
+		override := strings.Split(bucketOverride, ":")
+		p.BucketOverrides[override[0]] = override[1]
+	}
+}
+
 func (p *PodDefinition) parseEnv(env []string) {
 	for _, v := range env {
 		varParts := strings.Split(v, ":")
@@ -250,17 +259,19 @@ func (p *PodDefinition) parseEnv(env []string) {
 	}
 }
 
+func (p *PodDefinition) bucketParam(bucket string) string {
+	if bucket != "" {
+		if bucketReplacement, exists := p.BucketOverrides[bucket]; exists {
+			bucket = bucketReplacement
+		}
+		return "--bucket " + bucket
+	}
+	return ""
+}
+
 func sanitizeName(name string) string {
 	str := strings.ToLower(name)
 	str = strings.Replace(str, "_", "-", -1)
 	str = strings.Replace(str, "/", "-", -1)
 	return str
-}
-
-func bucketParam(bucket string) string {
-	if bucket == "" {
-		return "--bucket " + bucket
-	} else {
-		return ""
-	}
 }
