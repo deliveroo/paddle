@@ -3,13 +3,14 @@ package pipeline
 import (
 	"bufio"
 	"context"
-	"k8s.io/api/core/v1"
+	"log"
+	"time"
+
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes"
-	"log"
-	"time"
 )
 
 type WatchEventType string
@@ -138,7 +139,7 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 }
 
 func TailLogs(ctx context.Context, c kubernetes.Interface, pod *v1.Pod, container string) {
-	pods := c.Core().Pods(pod.Namespace)
+	pods := c.CoreV1().Pods(pod.Namespace)
 
 	req := pods.GetLogs(pod.Name, &v1.PodLogOptions{
 		Container: container,
