@@ -33,6 +33,7 @@ type WatchEvent struct {
 }
 
 func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-chan WatchEvent, error) {
+	log.Printf("podname: %s", watchPod.Name)
 	podSelector, err := fields.ParseSelector("metadata.name=" + watchPod.Name)
 	if err != nil {
 		return nil, err
@@ -43,6 +44,10 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 	}
 
 	watcher, err := c.CoreV1().Pods(watchPod.Namespace).Watch(options)
+
+	if err != nil {
+		return nil, err
+	}
 
 	out := make(chan WatchEvent)
 

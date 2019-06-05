@@ -9,23 +9,23 @@ import (
 )
 
 type PipelineDefinitionStep struct {
-	Step    string `yaml:"step"`
-	Version string `yaml:"version"`
-	Branch  string `yaml:"branch"`
-	Image   string `yaml:"image"`
+	Step    string `yaml:"step" json:"step"`
+	Version string `yaml:"version" json:"version"`
+	Branch  string `yaml:"branch" json:"branch"`
+	Image   string `yaml:"image" json:"image"`
 	Inputs  []struct {
-		Step    string `yaml:"step"`
-		Version string `yaml:"version"`
-		Branch  string `yaml:"branch"`
-		Path    string `yaml:"path"`
-		Bucket  string `yaml:"bucket"`
-	} `yaml:"inputs"`
-	Commands  []string `yaml:"commands"`
+		Step    string `yaml:"step" json:"step"`
+		Version string `yaml:"version" json:"version"`
+		Branch  string `yaml:"branch" json:"branch"`
+		Path    string `yaml:"path" json:"path"`
+		Bucket  string `yaml:"bucket" json:"bucket"`
+	} `yaml:"inputs" json:"inputs"`
+	Commands  []string `yaml:"commands" json:"commands"`
 	Resources struct {
-		CPU     int    `yaml:"cpu"`
-		Memory  string `yaml:"memory"`
-		Storage int    `yaml:"storage-mb"`
-	} `yaml:"resources"`
+		CPU     int    `yaml:"cpu" json:"cpu"`
+		Memory  string `yaml:"memory" json:"memory"`
+		Storage int    `yaml:"storage-mb" json:"storage-mb"`
+	} `yaml:"resources" json:"resources"`
 }
 
 type PipelineDefinition struct {
@@ -36,7 +36,7 @@ type PipelineDefinition struct {
 	Secrets   []string
 }
 
-func parsePipeline(data []byte) *PipelineDefinition {
+func ParsePipeline(data []byte) *PipelineDefinition {
 	pipeline := PipelineDefinition{}
 
 	err := yaml.Unmarshal(data, &pipeline)
