@@ -26,9 +26,11 @@ type PodDefinition struct {
 	PodName         string
 	StepName        string
 	StepVersion     string
+	StepInputs      string
 	BranchName      string
 	Namespace       string
 	Bucket          string
+	SnsArn          string
 	Secrets         []PodSecret
 	Env             []PodEnvVariable
 	BucketOverrides map[string]string
@@ -92,22 +94,31 @@ spec:
       env:
         -
           name: TASK_NAME
-					value: {{ .StepName }}
-				-
-					name: STATE_MACHINE_ID
-					value: {{ .PipelineName }}
-				-
-					name: BUCKET
-					value: {{ .Bucket }}
-				-
-					name: EXECUTION_PATH
-					value: {{ .BranchName }}/{{ .RunIdentifier }}/{{ .StepName }}
+          value: {{ .StepName }}
+        -
+          name: STATE_MACHINE_ID
+          value: {{ .PipelineName }}
+        -
+          name: BUCKET
+          value: {{ .Bucket }}
+        -
+          name: EXECUTION_PATH
+          value: {{ .BranchName }}/{{ .RunIdentifier }}/{{ .StepName }}
         -
           name: INPUT_PATH
           value: /data/input
         -
           name: OUTPUT_PATH
           value: /data/output
+        -
+          name: INPUTS
+          value: {{ .StepInputs }}
+        -
+          name: OUTPUT
+          value: {{ .StepName }}
+        -
+          name: SNS_TOPIC_ARN
+          value: {{ .SnsArn }}
         -
           name: AWS_ACCESS_KEY_ID
           valueFrom:
@@ -149,11 +160,16 @@ spec:
   persistentVolumeReclaimPolicy: Delete
 `
 
-func NewPodDefinition(pipelineDefinition *pipeline.PipelineDefinition, pipelineDefinitionStep *pipeline.PipelineDefinitionStep) *PodDefinition {
+func NewPodDefinition(pipelineDefinition *pipeline.PipelineDefinition, pipelineDefinitionStep *pipeline.PipelineDefinitionStep, snsArn string) *PodDefinition {
 	stepName := sanitizeName(pipelineDefinitionStep.Step)
 	branchName := sanitizeName(pipelineDefinitionStep.Branch)
 	stepVersion := sanitizeName(pipelineDefinitionStep.Version)
 	pipelineName := sanitizeName(pipelineDefinition.Pipeline)
+	inputSteps := []string{}
+	for _, input := range pipelineDefinitionStep.Inputs {
+		inputSteps = append(inputSteps, input.Step)
+	}
+	stepInputs := strings.Join(inputSteps, ",")
 	podName := fmt.Sprintf("%s-%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), sanitizeName(pipelineDefinitionStep.Version), stepName, branchName)
 
 	return &PodDefinition{
@@ -161,7 +177,9 @@ func NewPodDefinition(pipelineDefinition *pipeline.PipelineDefinition, pipelineD
 		PodName:         podName,
 		Namespace:       pipelineDefinition.Namespace,
 		Step:            *pipelineDefinitionStep,
+		StepInputs:      stepInputs,
 		Bucket:          pipelineDefinition.Bucket,
+		SnsArn:          snsArn,
 		StepName:        stepName,
 		StepVersion:     stepVersion,
 		BranchName:      branchName,

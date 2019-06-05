@@ -36,6 +36,7 @@ type runCmdFlagsStruct struct {
 	PipelineName       string
 	StepJSON           string
 	BucketName         string
+	SnsArn             string
 	Namespace          string
 	RunIdentifier      string
 	ImageTag           string
@@ -81,6 +82,7 @@ func init() {
 	runCmd.Flags().StringVarP(&runCmdFlags.StepJSON, "step", "s", "", "JSON of the step to execute")
 	runCmd.Flags().StringVarP(&runCmdFlags.Namespace, "namespace", "n", "modeltraining", "Kubernetes namespace")
 	runCmd.Flags().StringVarP(&runCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
+	runCmd.Flags().StringVarP(&runCmdFlags.SnsArn, "sns", "", "", "SNS topic ARN")
 	runCmd.Flags().StringVarP(&runCmdFlags.ImageTag, "tag", "t", "", "Image tag (overrides the one defined in the pipeline)")
 	runCmd.Flags().StringVarP(&runCmdFlags.StepBranch, "step-branch", "B", "", "Step branch (overrides the one defined in the pipeline)")
 	runCmd.Flags().StringVarP(&runCmdFlags.StepVersion, "step-version", "V", "", "Step version (overrides the one defined in the pipeline)")
@@ -134,7 +136,7 @@ func runStep(flags *runCmdFlagsStruct) {
 
 func runPipelineStep(definition *pipeline.PipelineDefinition, step *pipeline.PipelineDefinitionStep, flags *runCmdFlagsStruct) error {
 	log.Printf("[paddle] Running step %s", step.Step)
-	podDefinition := NewPodDefinition(definition, step)
+	podDefinition := NewPodDefinition(definition, step, flags.SnsArn)
 	podDefinition.RunIdentifier = flags.RunIdentifier
 	podDefinition.parseSecrets(flags.Secrets)
 	podDefinition.parseEnv(flags.Env)
