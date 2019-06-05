@@ -1,14 +1,15 @@
 package pipeline
 
 import (
+	"os"
+	"path/filepath"
+
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
-	"os"
-	"path/filepath"
 )
 
-func getKubernetesConfig() (*rest.Config, error) {
+func GetKubernetesConfig() (*rest.Config, error) {
 	var config *rest.Config
 	var kubeconfig string
 	if home := homeDir(); home != "" {

@@ -11,13 +11,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package pipeline
+package steps
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"time"
 
@@ -28,11 +28,16 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/kubernetes"
+
+	"github.com/deliveroo/paddle/cli/pipeline"
 )
 
 type runCmdFlagsStruct struct {
-	StepName           string
+	PipelineName       string
+	StepJSON           string
 	BucketName         string
+	Namespace          string
+	RunIdentifier      string
 	ImageTag           string
 	StepBranch         string
 	StepVersion        string
@@ -62,16 +67,19 @@ var runCmd = &cobra.Command{
 
 Example:
 
-$ paddle pipeline run test_pipeline.yaml
+$ paddle steps run -s [step_json]
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		runPipeline(args[0], runCmdFlags)
+		runStep(runCmdFlags)
 	},
 }
 
 func init() {
 	runCmdFlags = &runCmdFlagsStruct{}
-	runCmd.Flags().StringVarP(&runCmdFlags.StepName, "step", "s", "", "Single step to execute")
+	runCmd.Flags().StringVarP(&runCmdFlags.PipelineName, "pipeline", "p", "", "Pipeline name")
+	runCmd.Flags().StringVarP(&runCmdFlags.RunIdentifier, "identifier", "i", "", "Run identifier")
+	runCmd.Flags().StringVarP(&runCmdFlags.StepJSON, "step", "s", "", "JSON of the step to execute")
+	runCmd.Flags().StringVarP(&runCmdFlags.Namespace, "namespace", "n", "modeltraining", "Kubernetes namespace")
 	runCmd.Flags().StringVarP(&runCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
 	runCmd.Flags().StringVarP(&runCmdFlags.ImageTag, "tag", "t", "", "Image tag (overrides the one defined in the pipeline)")
 	runCmd.Flags().StringVarP(&runCmdFlags.StepBranch, "step-branch", "B", "", "Step branch (overrides the one defined in the pipeline)")
@@ -84,7 +92,7 @@ func init() {
 	runCmdFlags.DeletePollInterval = defaultDeletePollInterval
 	runCmdFlags.StartTimeout = defaultStartTimeout
 
-	config, err := GetKubernetesConfig()
+	config, err := pipeline.GetKubernetesConfig()
 	if err != nil {
 		panic(err.Error())
 	}
@@ -94,39 +102,40 @@ func init() {
 	}
 }
 
-func runPipeline(path string, flags *runCmdFlagsStruct) {
-	data, err := ioutil.ReadFile(path)
-	if err != nil {
-		panic(err.Error())
-	}
-	pipeline := ParsePipeline(data)
-	if flags.BucketName != "" {
-		pipeline.Bucket = flags.BucketName
+func runStep(flags *runCmdFlagsStruct) {
+
+	definition := pipeline.PipelineDefinition{
+		Pipeline:  flags.PipelineName,
+		Bucket:    flags.BucketName,
+		Namespace: flags.Namespace,
 	}
 
-	for _, step := range pipeline.Steps {
-		if flags.StepName != "" && step.Step != flags.StepName {
-			continue
-		}
-		if flags.ImageTag != "" {
-			step.OverrideTag(flags.ImageTag)
-		}
-		if flags.StepBranch != "" {
-			step.OverrideBranch(flags.StepBranch, flags.OverrideInputs)
-		}
-		if flags.StepVersion != "" {
-			step.OverrideVersion(flags.StepVersion, flags.OverrideInputs)
-		}
-		err = runPipelineStep(pipeline, &step, flags)
-		if err != nil {
-			logFatalf("[paddle] %s", err.Error())
-		}
+	step := pipeline.PipelineDefinitionStep{}
+
+	err := json.Unmarshal([]byte(flags.StepJSON), &step)
+	if err != nil {
+		log.Fatalf("error: %v", err)
+	}
+
+	if flags.ImageTag != "" {
+		step.OverrideTag(flags.ImageTag)
+	}
+	if flags.StepBranch != "" {
+		step.OverrideBranch(flags.StepBranch, flags.OverrideInputs)
+	}
+	if flags.StepVersion != "" {
+		step.OverrideVersion(flags.StepVersion, flags.OverrideInputs)
+	}
+	err = runPipelineStep(&definition, &step, flags)
+	if err != nil {
+		logFatalf("[paddle] %s", err.Error())
 	}
 }
 
-func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *runCmdFlagsStruct) error {
+func runPipelineStep(definition *pipeline.PipelineDefinition, step *pipeline.PipelineDefinitionStep, flags *runCmdFlagsStruct) error {
 	log.Printf("[paddle] Running step %s", step.Step)
-	podDefinition := NewPodDefinition(pipeline, step)
+	podDefinition := NewPodDefinition(definition, step)
+	podDefinition.RunIdentifier = flags.RunIdentifier
 	podDefinition.parseSecrets(flags.Secrets)
 	podDefinition.parseEnv(flags.Env)
 	podDefinition.setBucketOverrides(flags.BucketOverrides)
@@ -138,8 +147,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		return err
 	}
 
-	pods := clientset.CoreV1().Pods(pipeline.Namespace)
-
+	pods := clientset.CoreV1().Pods(definition.Namespace)
 
 	err = deleteAndWait(clientset, podDefinition, flags)
 	if err != nil {
@@ -156,7 +164,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	watch, err := Watch(ctx, clientset, pod)
+	watch, err := pipeline.Watch(ctx, clientset, pod)
 	if err != nil {
 		return err
 	}
@@ -181,28 +189,28 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		select {
 		case e := <-watch:
 			switch e.Type {
-			case Added:
+			case pipeline.Added:
 				log.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
 				containers[e.Container] = true
 				if flags.TailLogs {
-					TailLogs(ctx, clientset, e.Pod, e.Container)
+					pipeline.TailLogs(ctx, clientset, e.Pod, e.Container)
 				}
-			case Deleted:
+			case pipeline.Deleted:
 				log.Println("[paddle] Pod deleted")
 				return errors.New("Pod was deleted unexpectedly.")
-			case Removed:
+			case pipeline.Removed:
 				if !removed[e.Container] {
 					log.Printf("[paddle] Container removed: %s", e.Container)
 				}
 				removed[e.Container] = true
 				continue
-			case Completed:
+			case pipeline.Completed:
 				log.Printf("[paddle] Pod execution completed")
 				if podDefinition.needsVolume() {
 					deleteVolumeClaim(clientset, podDefinition, flags)
 				}
 				return nil
-			case Failed:
+			case pipeline.Failed:
 				var msg string
 				if e.Container != "" {
 					if e.Message != "" {
@@ -212,7 +220,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 					}
 					_, present := containers[e.Container]
 					if !present && flags.TailLogs { // container died before being added
-						TailLogs(ctx, clientset, e.Pod, e.Container)
+						pipeline.TailLogs(ctx, clientset, e.Pod, e.Container)
 						time.Sleep(3 * time.Second) // give it time to tail logs
 					}
 				} else {
