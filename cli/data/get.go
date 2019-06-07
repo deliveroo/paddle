@@ -35,6 +35,7 @@ var (
 	getBranch     string
 	getCommitPath string
 	getBucket     string
+	getFiles      string
 )
 
 const (
@@ -52,13 +53,19 @@ var getCmd = &cobra.Command{
 Example:
 
 $ paddle data get -b experimental --bucket roo-pipeline trained-model/version1 dest/path
+$ paddle data get -b experimental --bucket roo-pipeline --files file1.csv,file2.csv trained-model/version1 dest/path
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		var files []string
+
 		if getBucket == "" {
 			getBucket = viper.GetString("bucket")
 		}
 		if getBucket == "" {
 			exitErrorf("Bucket not defined. Please define 'bucket' in your config file.")
+		}
+		if getFiles != "" {
+			files = strings.Split(getFiles, ",")
 		}
 
 		source := S3Path{
@@ -66,7 +73,7 @@ $ paddle data get -b experimental --bucket roo-pipeline trained-model/version1 d
 			path:   fmt.Sprintf("%s/%s/%s", args[0], getBranch, getCommitPath),
 		}
 
-		copyPathToDestination(source, args[1])
+		copyPathToDestination(source, args[1], files)
 	},
 }
 
@@ -74,9 +81,10 @@ func init() {
 	getCmd.Flags().StringVarP(&getBranch, "branch", "b", "master", "Branch to work on")
 	getCmd.Flags().StringVar(&getBucket, "bucket", "", "Bucket to use")
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
+	getCmd.Flags().StringVarP(&getFiles, "files", "f", "", "A list of files to download separated by comma")
 }
 
-func copyPathToDestination(source S3Path, destination string) {
+func copyPathToDestination(source S3Path, destination string, files []string) {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -93,7 +101,7 @@ func copyPathToDestination(source S3Path, destination string) {
 	}
 
 	fmt.Println("Copying " + source.path + " to " + destination)
-	copy(session, source, destination)
+	copy(session, source, destination, files)
 }
 
 func readHEAD(session *session.Session, source S3Path) string {
@@ -110,7 +118,7 @@ func readHEAD(session *session.Session, source S3Path) string {
 	return buf.String()
 }
 
-func copy(session *session.Session, source S3Path, destination string) {
+func copy(session *session.Session, source S3Path, destination string, files []string) {
 	query := &s3.ListObjectsV2Input{
 		Bucket: aws.String(source.bucket),
 		Prefix: aws.String(source.path),
@@ -124,7 +132,7 @@ func copy(session *session.Session, source S3Path, destination string) {
 			return
 		}
 
-		copyToLocalFiles(svc, response.Contents, source, destination)
+		copyToLocalFiles(svc, response.Contents, source, destination, files)
 
 		// Check if more results
 		query.ContinuationToken = response.NextContinuationToken
@@ -135,19 +143,36 @@ func copy(session *session.Session, source S3Path, destination string) {
 	}
 }
 
-func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, destination string) {
+func copyToLocalFiles(s3Client *s3.S3, objects []*s3.Object, source S3Path, destination string, files []string) {
 	var (
-		wg  = new(sync.WaitGroup)
-		sem = make(chan struct{}, s3ParallelGets)
+		wg           = new(sync.WaitGroup)
+		sem          = make(chan struct{}, s3ParallelGets)
+		downloadList = filterObjects(objects, files)
 	)
 
 	wg.Add(len(objects))
 
-	for _, key := range objects {
+	for _, key := range downloadList {
 		go process(s3Client, source, destination, *key.Key, sem, wg)
 	}
 
 	wg.Wait()
+}
+
+func filterObjects(objects []*s3.Object, files []string) []*s3.Object {
+	var downloadList []*s3.Object
+	if len(files) == 0 {
+		return objects
+	}
+	for _, key := range objects {
+		_, file := filepath.Split(*key.Key)
+		for _, value := range files {
+			if value == strings.TrimSpace(file) {
+				downloadList = append(downloadList, key)
+			}
+		}
+	}
+	return downloadList
 }
 
 func process(s3Client *s3.S3, src S3Path, basePath string, filePath string, sem chan struct{}, wg *sync.WaitGroup) {
