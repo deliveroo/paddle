@@ -35,7 +35,7 @@ var (
 	getBranch     string
 	getCommitPath string
 	getBucket     string
-	getFiles      string
+	getFiles      []string
 )
 
 const (
@@ -56,16 +56,11 @@ $ paddle data get -b experimental --bucket roo-pipeline trained-model/version1 d
 $ paddle data get -b experimental --bucket roo-pipeline --files file1.csv,file2.csv trained-model/version1 dest/path
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		var files []string
-
 		if getBucket == "" {
 			getBucket = viper.GetString("bucket")
 		}
 		if getBucket == "" {
 			exitErrorf("Bucket not defined. Please define 'bucket' in your config file.")
-		}
-		if getFiles != "" {
-			files = strings.Split(getFiles, ",")
 		}
 
 		source := S3Path{
@@ -73,7 +68,7 @@ $ paddle data get -b experimental --bucket roo-pipeline --files file1.csv,file2.
 			path:   fmt.Sprintf("%s/%s/%s", args[0], getBranch, getCommitPath),
 		}
 
-		copyPathToDestination(source, args[1], files)
+		copyPathToDestination(source, args[1], getFiles)
 	},
 }
 
@@ -81,7 +76,7 @@ func init() {
 	getCmd.Flags().StringVarP(&getBranch, "branch", "b", "master", "Branch to work on")
 	getCmd.Flags().StringVar(&getBucket, "bucket", "", "Bucket to use")
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
-	getCmd.Flags().StringVarP(&getFiles, "files", "f", "", "A list of files to download separated by comma")
+	getCmd.Flags().StringSliceVarP(&getFiles, "files", "f", []string{}, "A list of files to download separated by comma")
 }
 
 func copyPathToDestination(source S3Path, destination string, files []string) {
@@ -167,7 +162,7 @@ func filterObjects(objects []*s3.Object, files []string) []*s3.Object {
 	for _, key := range objects {
 		_, file := filepath.Split(*key.Key)
 		for _, value := range files {
-			if value == strings.TrimSpace(file) {
+			if value == file {
 				downloadList = append(downloadList, key)
 			}
 		}
