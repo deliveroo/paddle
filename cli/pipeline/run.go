@@ -140,7 +140,6 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 
 	pods := clientset.CoreV1().Pods(pipeline.Namespace)
 
-
 	err = deleteAndWait(clientset, podDefinition, flags)
 	if err != nil {
 		return err
@@ -189,7 +188,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 				}
 			case Deleted:
 				log.Println("[paddle] Pod deleted")
-				return errors.New("Pod was deleted unexpectedly.")
+				return errors.New("pod was deleted unexpectedly")
 			case Removed:
 				if !removed[e.Container] {
 					log.Printf("[paddle] Container removed: %s", e.Container)
@@ -201,6 +200,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 				if podDefinition.needsVolume() {
 					deleteVolumeClaim(clientset, podDefinition, flags)
 				}
+				deleteAndWait(clientset, podDefinition, flags)
 				return nil
 			case Failed:
 				var msg string
