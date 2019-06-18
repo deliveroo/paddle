@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -13,7 +13,7 @@ func TestCompileTemplate(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	pipeline := parsePipeline(data)
+	pipeline := ParsePipeline(data)
 
 	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
 
@@ -36,7 +36,7 @@ func TestSecrets(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	pipeline := parsePipeline(data)
+	pipeline := ParsePipeline(data)
 
 	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
 	secrets := []string{"ENV_VAR:secret_store:key_name"}
@@ -68,7 +68,7 @@ func TestEnv(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	pipeline := parsePipeline(data)
+	pipeline := ParsePipeline(data)
 
 	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
 	env := []string{"ENV_VAR:env_value"}
