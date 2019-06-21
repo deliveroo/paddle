@@ -19,6 +19,12 @@ func TestParsePipeline(t *testing.T) {
 	if pipeline.Bucket != "canoe-sample-pipeline" {
 		t.Errorf("Expected bucket to be canoe-sample-pipeline, got %s", pipeline.Bucket)
 	}
+
+	for _, step := range pipeline.Steps {
+		if step.Subdir != true {
+			t.Errorf("expected all steps 'subdir' to be true, got %t", step.Subdir)
+		}
+	}
 }
 
 func TestOverrideTag(t *testing.T) {

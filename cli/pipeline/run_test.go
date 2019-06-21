@@ -114,7 +114,7 @@ func TestRunPipelineSuccess(t *testing.T) {
 
 	for _, p := range expectPods {
 		if deleted[p] != 3 {
-			t.Errorf("expected delete of "+p+" to be called twice, got %i", deleted[p])
+			t.Errorf("expected delete of "+p+" to be called three times, got %i", deleted[p])
 		}
 		if created[p] != 1 {
 			t.Errorf("expected create of "+p+" to be called once, got %i", created[p])

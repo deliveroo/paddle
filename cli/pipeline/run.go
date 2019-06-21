@@ -34,6 +34,7 @@ type runCmdFlagsStruct struct {
 	StepName           string
 	BucketName         string
 	ImageTag           string
+	Subdir             bool
 	StepBranch         string
 	StepVersion        string
 	OverrideInputs     bool
@@ -74,6 +75,7 @@ func init() {
 	runCmd.Flags().StringVarP(&runCmdFlags.StepName, "step", "s", "", "Single step to execute")
 	runCmd.Flags().StringVarP(&runCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
 	runCmd.Flags().StringVarP(&runCmdFlags.ImageTag, "tag", "t", "", "Image tag (overrides the one defined in the pipeline)")
+	runCmd.Flags().BoolVarP(&runCmdFlags.Subdir, "subdir", "d", false, "Add step name as export path subdirectory")
 	runCmd.Flags().StringVarP(&runCmdFlags.StepBranch, "step-branch", "B", "", "Step branch (overrides the one defined in the pipeline)")
 	runCmd.Flags().StringVarP(&runCmdFlags.StepVersion, "step-version", "V", "", "Step version (overrides the one defined in the pipeline)")
 	runCmd.Flags().BoolVarP(&runCmdFlags.TailLogs, "logs", "l", true, "Tail logs")
@@ -110,6 +112,9 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 		}
 		if flags.ImageTag != "" {
 			step.OverrideTag(flags.ImageTag)
+		}
+		if flags.Subdir {
+			step.OverrideSubdir(flags.Subdir)
 		}
 		if flags.StepBranch != "" {
 			step.OverrideBranch(flags.StepBranch, flags.OverrideInputs)

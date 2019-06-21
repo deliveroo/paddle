@@ -132,7 +132,7 @@ spec:
         - "-c"
         - "mkdir -p $INPUT_PATH $OUTPUT_PATH &&
           {{ range $index, $input := .Step.Inputs }}
-          paddle data get {{ $input.Step }}/{{ $input.Version }} $INPUT_PATH -b {{ $input.Branch | sanitizeName }} -p {{ $input.Path }} {{ $input.Bucket | bucketParam }} &&
+          paddle data get {{ $input.Step }}/{{ $input.Version }} $INPUT_PATH -b {{ $input.Branch | sanitizeName }} -p {{ $input.Path }} -d {{ .Step.Subdir }} {{ $input.Bucket | bucketParam }} &&
           {{ end }}
           touch /data/first-step.txt &&
           echo first step finished &&

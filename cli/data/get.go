@@ -78,7 +78,7 @@ func init() {
 	getCmd.Flags().StringVar(&getBucket, "bucket", "", "Bucket to use")
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
 	getCmd.Flags().StringSliceVarP(&getFiles, "files", "f", []string{}, "A list of files to download separated by comma")
-	getCmd.Flags().BoolVarP(&getSubdir, "subdir", "s", false, "Add step name as export path subdirectory")
+	getCmd.Flags().BoolVarP(&getSubdir, "subdir", "d", false, "Add step name as export path subdirectory")
 }
 
 func copyPathToDestination(source S3Path, destination string, files []string, subdir bool) {

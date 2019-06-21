@@ -13,6 +13,7 @@ type PipelineDefinitionStep struct {
 	Version string `yaml:"version" json:"version"`
 	Branch  string `yaml:"branch" json:"branch"`
 	Image   string `yaml:"image" json:"image"`
+	Subdir  bool   `yaml:"subdir" json:"subdir"`
 	Inputs  []struct {
 		Step    string `yaml:"step" json:"step"`
 		Version string `yaml:"version" json:"version"`
@@ -62,6 +63,12 @@ func (p *PipelineDefinitionStep) OverrideTag(tag string) {
 			tag,
 		}
 		p.Image = strings.Join(parts, ":")
+	}
+}
+
+func (p *PipelineDefinitionStep) OverrideSubdir(subdir bool) {
+	if subdir {
+		p.Subdir = subdir
 	}
 }
 
