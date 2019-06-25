@@ -10,7 +10,6 @@ steps:
     inputs: []
     image: 219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest
     branch: master
-    subdir: false
     commands:
       - echo executing sample-pipeline-data > ${OUTPUT_PATH}/sample-pipeline-data.txt
     resources:
@@ -26,9 +25,9 @@ steps:
         version: version1
         branch: master
         path: HEAD
+        subdir: 'step1-version1'
     image: 219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest
     branch: master
-    subdir: true
     commands:
       - echo executing sample-pipeline-data > ${OUTPUT_PATH}/sample-pipeline-data-model.txt
     resources:

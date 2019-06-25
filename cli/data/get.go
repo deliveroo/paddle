@@ -36,7 +36,7 @@ var (
 	getCommitPath string
 	getBucket     string
 	getFiles      []string
-	getSubdir     bool
+	getSubdir     string
 )
 
 const (
@@ -53,7 +53,7 @@ var getCmd = &cobra.Command{
 
 Example:
 
-$ paddle data get -b experimental --bucket roo-pipeline --subdir true trained-model/version1 dest/path
+$ paddle data get -b experimental --bucket roo-pipeline --subdir version1 trained-model/version1 dest/path
 $ paddle data get -b experimental --bucket roo-pipeline --files file1.csv,file2.csv trained-model/version1 dest/path
 `,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -78,10 +78,10 @@ func init() {
 	getCmd.Flags().StringVar(&getBucket, "bucket", "", "Bucket to use")
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
 	getCmd.Flags().StringSliceVarP(&getFiles, "files", "f", []string{}, "A list of files to download separated by comma")
-	getCmd.Flags().BoolVarP(&getSubdir, "subdir", "d", false, "Add step name as export path subdirectory")
+	getCmd.Flags().StringVarP(&getSubdir, "subdir", "d", "", "Custom subfolder name for export path")
 }
 
-func copyPathToDestination(source S3Path, destination string, files []string, subdir bool) {
+func copyPathToDestination(source S3Path, destination string, files []string, subdir string) {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -96,9 +96,8 @@ func copyPathToDestination(source S3Path, destination string, files []string, su
 	if !strings.HasSuffix(source.path, "/") {
 		source.path += "/"
 	}
-	if subdir {
-		subdirName := strings.Split(source.path, "/")[0]
-		destination = parseDestination(destination, subdirName)
+	if subdir != "" {
+		destination = parseDestination(destination, subdir)
 	}
 
 	fmt.Println("Copying " + source.path + " to " + destination)
@@ -119,11 +118,11 @@ func readHEAD(session *session.Session, source S3Path) string {
 	return buf.String()
 }
 
-func parseDestination(destination string, subdirName string) string {
+func parseDestination(destination string, subdir string) string {
 	if !strings.HasPrefix(destination, "/") {
-		destination += "/" + subdirName
+		destination += "/" + subdir
 	} else {
-		destination += subdirName
+		destination += subdir
 	}
 	return destination
 }

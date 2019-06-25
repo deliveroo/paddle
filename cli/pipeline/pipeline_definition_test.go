@@ -20,12 +20,9 @@ func TestParsePipeline(t *testing.T) {
 		t.Errorf("Expected bucket to be canoe-sample-pipeline, got %s", pipeline.Bucket)
 	}
 
-	if pipeline.Steps[0].Subdir != false {
-		t.Errorf("expected first step.subdir to be false but got %t", pipeline.Steps[0].Subdir)
-	}
-
-	if pipeline.Steps[1].Subdir != true {
-		t.Errorf("expected second step.subdir to be true but got %t", pipeline.Steps[1].Subdir)
+	subdir := pipeline.Steps[1].Inputs[0].Subdir
+	if subdir != "step1-version1" {
+		t.Errorf("expected second step input subdir to be 'step1-version1' but got %s", subdir)
 	}
 }
 
@@ -46,26 +43,6 @@ func TestOverrideTag(t *testing.T) {
 
 	if pipeline.Steps[0].Image != "219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:foo" {
 		t.Errorf("Image is %s", pipeline.Steps[0].Image)
-	}
-}
-
-func TestOverrideSubdir(t *testing.T) {
-	data, err := ioutil.ReadFile("test/sample_steps_passing.yml")
-	if err != nil {
-		panic(err.Error())
-	}
-	pipeline := ParsePipeline(data)
-
-	pipeline.Steps[0].OverrideSubdir(true)
-
-	if pipeline.Steps[0].Subdir != true {
-		t.Errorf("expected subdir to be overriden to true but it is still %t", pipeline.Steps[0].Subdir)
-	}
-
-	pipeline.Steps[1].OverrideSubdir(false)
-
-	if pipeline.Steps[1].Subdir != true {
-		t.Errorf("expected subdir not to be overriden from true but it is now %t", pipeline.Steps[1].Subdir)
 	}
 }
 
