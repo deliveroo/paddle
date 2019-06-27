@@ -119,7 +119,7 @@ func readHEAD(session *session.Session, source S3Path) string {
 }
 
 func parseDestination(destination string, subdir string) string {
-	if !strings.HasPrefix(destination, "/") {
+	if !strings.HasSuffix(destination, "/") {
 		destination += "/" + subdir
 	} else {
 		destination += subdir
