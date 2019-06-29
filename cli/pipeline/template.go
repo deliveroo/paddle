@@ -132,7 +132,7 @@ spec:
         - "-c"
         - "mkdir -p $INPUT_PATH $OUTPUT_PATH &&
           {{ range $index, $input := .Step.Inputs }}
-          paddle data get {{ $input.Step }}/{{ $input.Version }} $INPUT_PATH -b {{ $input.Branch | sanitizeName }} -p {{ $input.Path }} {{ $input.Bucket | bucketParam }} &&
+          paddle data get {{ $input.Step }}/{{ $input.Version }} $INPUT_PATH -b {{ $input.Branch | sanitizeName }} -p {{ $input.Path }} {{ $input.Bucket | bucketParam }} {{$input.Keys | keysParam}} &&
           {{ end }}
           touch /data/first-step.txt &&
           echo first step finished &&
@@ -209,6 +209,7 @@ func (p PodDefinition) compile() *bytes.Buffer {
 	fmap := template.FuncMap{
 		"sanitizeName": sanitizeName,
 		"bucketParam":  p.bucketParam,
+		"keysParam":    p.keysParam,
 	}
 	tmpl := template.Must(template.New("podTemplate").Funcs(fmap).Parse(podTemplate))
 	buffer := new(bytes.Buffer)
@@ -265,6 +266,13 @@ func (p *PodDefinition) bucketParam(bucket string) string {
 			bucket = bucketReplacement
 		}
 		return "--bucket " + bucket
+	}
+	return ""
+}
+
+func (p *PodDefinition) keysParam(keys []string) string {
+	if len(keys) != 0 {
+		return "--keys " + strings.Join(keys, ",")
 	}
 	return ""
 }

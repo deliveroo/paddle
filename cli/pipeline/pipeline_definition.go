@@ -14,11 +14,12 @@ type PipelineDefinitionStep struct {
 	Branch  string `yaml:"branch" json:"branch"`
 	Image   string `yaml:"image" json:"image"`
 	Inputs  []struct {
-		Step    string `yaml:"step" json:"step"`
-		Version string `yaml:"version" json:"version"`
-		Branch  string `yaml:"branch" json:"branch"`
-		Path    string `yaml:"path" json:"path"`
-		Bucket  string `yaml:"bucket" json:"bucket"`
+		Step    string   `yaml:"step" json:"step"`
+		Version string   `yaml:"version" json:"version"`
+		Branch  string   `yaml:"branch" json:"branch"`
+		Path    string   `yaml:"path" json:"path"`
+		Bucket  string   `yaml:"bucket" json:"bucket"`
+		Keys    []string `yaml:"keys" json:"keys"`
 	} `yaml:"inputs" json:"inputs"`
 	Commands  []string `yaml:"commands" json:"commands"`
 	Resources struct {
