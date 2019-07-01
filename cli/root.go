@@ -19,7 +19,6 @@ import (
 
 	"github.com/deliveroo/paddle/cli/data"
 	"github.com/deliveroo/paddle/cli/pipeline"
-	"github.com/deliveroo/paddle/cli/steps"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -57,7 +56,6 @@ func init() {
 
 	RootCmd.AddCommand(data.DataCmd)
 	RootCmd.AddCommand(pipeline.PipelineCmd)
-	RootCmd.AddCommand(steps.StepsCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
