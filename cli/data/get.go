@@ -36,6 +36,7 @@ var (
 	getCommitPath string
 	getBucket     string
 	getFiles      []string
+	getSubdir     string
 )
 
 const (
@@ -45,14 +46,14 @@ const (
 )
 
 var getCmd = &cobra.Command{
-	Use:   "get [version] [destination path]",
+	Use:   "get [step/version] [destination path]",
 	Short: "Fetch data from S3",
 	Args:  cobra.ExactArgs(2),
 	Long: `Fetch data from a S3 versioned path.
 
 Example:
 
-$ paddle data get -b experimental --bucket roo-pipeline trained-model/version1 dest/path
+$ paddle data get -b experimental --bucket roo-pipeline --subdir version1 trained-model/version1 dest/path
 $ paddle data get -b experimental --bucket roo-pipeline --files file1.csv,file2.csv trained-model/version1 dest/path
 `,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -68,7 +69,7 @@ $ paddle data get -b experimental --bucket roo-pipeline --files file1.csv,file2.
 			path:   fmt.Sprintf("%s/%s/%s", args[0], getBranch, getCommitPath),
 		}
 
-		copyPathToDestination(source, args[1], getFiles)
+		copyPathToDestination(source, args[1], getFiles, getSubdir)
 	},
 }
 
@@ -77,9 +78,10 @@ func init() {
 	getCmd.Flags().StringVar(&getBucket, "bucket", "", "Bucket to use")
 	getCmd.Flags().StringVarP(&getCommitPath, "path", "p", "HEAD", "Path to fetch (instead of HEAD)")
 	getCmd.Flags().StringSliceVarP(&getFiles, "files", "f", []string{}, "A list of files to download separated by comma")
+	getCmd.Flags().StringVarP(&getSubdir, "subdir", "d", "", "Custom subfolder name for export path")
 }
 
-func copyPathToDestination(source S3Path, destination string, files []string) {
+func copyPathToDestination(source S3Path, destination string, files []string, subdir string) {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
@@ -93,6 +95,9 @@ func copyPathToDestination(source S3Path, destination string, files []string) {
 	}
 	if !strings.HasSuffix(source.path, "/") {
 		source.path += "/"
+	}
+	if subdir != "" {
+		destination = parseDestination(destination, subdir)
 	}
 
 	fmt.Println("Copying " + source.path + " to " + destination)
@@ -111,6 +116,15 @@ func readHEAD(session *session.Session, source S3Path) string {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(out.Body)
 	return buf.String()
+}
+
+func parseDestination(destination string, subdir string) string {
+	if !strings.HasSuffix(destination, "/") {
+		destination += "/" + subdir
+	} else {
+		destination += subdir
+	}
+	return destination
 }
 
 func copy(session *session.Session, source S3Path, destination string, files []string) {
