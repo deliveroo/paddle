@@ -9,6 +9,13 @@ type S3Path struct {
 	path   string
 }
 
+//func CreateS3Path(input pipeline.PipelineDefinitionStepInput) S3Path {
+//return S3Path{
+//bucket: input.Bucket,
+//path:   fmt.Sprintf("%s/%s/%s/%s/", input.Step, input.Version, input.Branch, input.Path),
+//}
+//}
+
 func (p *S3Path) Basename() string {
 	components := strings.Split(p.path, "/")
 	return components[len(components)-1]

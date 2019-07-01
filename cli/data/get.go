@@ -82,6 +82,15 @@ func init() {
 	getCmd.Flags().StringVarP(&getSubdir, "subdir", "d", "", "Custom subfolder name for export path")
 }
 
+func CopyPathToDestinationWithoutS3Path(bucket string, step string, version string, branch string, path string, destination string, files []string, subdir string) {
+	source := S3Path{
+		bucket: bucket,
+		path:   fmt.Sprintf("%s/%s/%s/%s/", step, version, branch, path),
+	}
+
+	copyPathToDestination(source, destination, files, subdir)
+}
+
 func copyPathToDestination(source S3Path, destination string, keys []string, subdir string) {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,

@@ -25,4 +25,5 @@ var PipelineCmd = &cobra.Command{
 
 func init() {
 	PipelineCmd.AddCommand(runCmd)
+	PipelineCmd.AddCommand(localRunCmd)
 }
