@@ -2,16 +2,15 @@ package pipeline
 
 import (
 	"fmt"
-	"testing"
-	"time"
-
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/kubernetes/fake"
 	ktesting "k8s.io/client-go/testing"
+	"testing"
+	"time"
 )
 
 func parseTimeOrDie(ts string) metav1.Time {
@@ -113,11 +112,11 @@ func TestRunPipelineSuccess(t *testing.T) {
 	expectPods := [2]string{"sample-steps-passing-version1-step1-master", "sample-steps-passing-version1a-step2-master"}
 
 	for _, p := range expectPods {
-		if deleted[p] != 3 {
-			t.Errorf("expected delete of "+p+" to be called three times, got %i", deleted[p])
+		if deleted[p] != 2 {
+			t.Errorf("excepted delete of "+p+" to be called twice, got %i", deleted[p])
 		}
 		if created[p] != 1 {
-			t.Errorf("expected create of "+p+" to be called once, got %i", created[p])
+			t.Errorf("excepted create of "+p+" to be called once, got %i", created[p])
 		}
 	}
 }
@@ -163,7 +162,7 @@ func TestRunPipelineFailure(t *testing.T) {
 	runPipeline("test/sample_steps_passing.yml", testRunFlags)
 
 	if len(errors) != 2 {
-		t.Errorf("expected two errors, actual %v", len(errors))
+		t.Errorf("excepted two errors, actual %v", len(errors))
 	}
 }
 
@@ -206,7 +205,7 @@ func TestRunPipelineStartTimeout(t *testing.T) {
 	runPipeline("test/sample_steps_passing.yml", &flags)
 
 	if len(errors) != 2 {
-		t.Errorf("expected two errors, actual %v", len(errors))
+		t.Errorf("excepted two errors, actual %v", len(errors))
 	}
 	msg := "[paddle] [Timed out waiting for pod to start. Cluster might not have sufficient resources.]"
 	for _, err := range errors {

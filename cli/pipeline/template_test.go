@@ -2,10 +2,9 @@ package pipeline
 
 import (
 	"io/ioutil"
-	"strings"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -14,25 +13,21 @@ func TestCompileTemplate(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	pipeline := ParsePipeline(data)
+	pipeline := parsePipeline(data)
 
-	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[1])
+	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
 
 	stepPodBuffer := podDefinition.compile()
 
 	pod := &v1.Pod{}
 	yaml.NewYAMLOrJSONDecoder(stepPodBuffer, 4096).Decode(pod)
 
-	if pod.Name != "sample-steps-passing-version1a-step2-master" {
+	if pod.Name != "sample-steps-passing-version1-step1-master" {
 		t.Errorf("Pod name is %s", pod.Name)
 	}
 
 	if pod.Spec.Containers[0].Image != pipeline.Steps[0].Image {
 		t.Errorf("First image is %s", pod.Spec.Containers[0].Image)
-	}
-
-	if !strings.Contains(pod.Spec.Containers[1].Command[2], "-d step1-version1") {
-		t.Errorf("Expected paddle get command to contain -d step1-version1, but it did not")
 	}
 }
 
@@ -41,7 +36,7 @@ func TestSecrets(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	pipeline := ParsePipeline(data)
+	pipeline := parsePipeline(data)
 
 	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
 	secrets := []string{"ENV_VAR:secret_store:key_name"}
@@ -73,7 +68,7 @@ func TestEnv(t *testing.T) {
 	if err != nil {
 		panic(err.Error())
 	}
-	pipeline := ParsePipeline(data)
+	pipeline := parsePipeline(data)
 
 	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
 	env := []string{"ENV_VAR:env_value"}
