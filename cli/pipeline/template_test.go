@@ -103,8 +103,8 @@ func TestKeys(t *testing.T) {
 	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
 
 	keys := podDefinition.Step.Inputs[0].Keys
-	if len(keys) != 2 {
-		t.Errorf("Failed to parse keys, got: %v, want: 2.", len(keys))
+	if len(keys) != 3 {
+		t.Errorf("Failed to parse keys, got: %v, want: 3.", len(keys))
 	}
 
 	stepPodBuffer := podDefinition.compile()
@@ -112,7 +112,7 @@ func TestKeys(t *testing.T) {
 	pod := &v1.Pod{}
 	yaml.NewYAMLOrJSONDecoder(stepPodBuffer, 4096).Decode(pod)
 
-	if pod.Name != "sample-steps-passing-version1-step1-master" {
+	if pod.Name != "sample-keys-version1-step1-master" {
 		t.Errorf("Pod name is %s", pod.Name)
 	}
 
@@ -121,7 +121,7 @@ func TestKeys(t *testing.T) {
 	}
 
 	command := pod.Spec.Containers[1].Command[2]
-	if !strings.Contains(command, "--keys file1.json,file2.json") {
+	if !strings.Contains(command, "--keys file1.json,file2.json,folder/file3.json") {
 		t.Errorf("Failed to build paddle get, keys flag is missing")
 	}
 }
