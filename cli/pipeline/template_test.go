@@ -34,6 +34,10 @@ func TestCompileTemplate(t *testing.T) {
 	if !strings.Contains(pod.Spec.Containers[1].Command[2], "-d step1-version1") {
 		t.Errorf("Expected paddle get command to contain -d step1-version1, but it did not")
 	}
+
+	if strings.Count(pod.Spec.Containers[1].Command[2], "-d") != 1 {
+		t.Errorf("Only one paddle get command should contain the -d parameter")
+	}
 }
 
 func TestSecrets(t *testing.T) {

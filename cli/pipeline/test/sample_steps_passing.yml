@@ -26,6 +26,11 @@ steps:
         branch: master
         path: HEAD
         subdir: 'step1-version1'
+      -
+        step: step1
+        version: version1
+        branch: master
+        path: HEAD
     image: 219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest
     branch: master
     commands:
