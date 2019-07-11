@@ -13,11 +13,16 @@ func TestParsePipeline(t *testing.T) {
 	pipeline := ParsePipeline(data)
 
 	if len(pipeline.Steps) != 2 {
-		t.Errorf("excepted two steps, got %d", len(pipeline.Steps))
+		t.Errorf("expected two steps, got %d", len(pipeline.Steps))
 	}
 
 	if pipeline.Bucket != "canoe-sample-pipeline" {
 		t.Errorf("Expected bucket to be canoe-sample-pipeline, got %s", pipeline.Bucket)
+	}
+
+	subdir := pipeline.Steps[1].Inputs[0].Subdir
+	if subdir != "step1-version1" {
+		t.Errorf("expected second step input subdir to be 'step1-version1' but got %s", subdir)
 	}
 }
 
