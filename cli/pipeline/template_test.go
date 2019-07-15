@@ -100,3 +100,36 @@ func TestEnv(t *testing.T) {
 		t.Errorf("Did not find env var")
 	}
 }
+
+func TestKeys(t *testing.T) {
+	data, err := ioutil.ReadFile("test/sample_keys.yml")
+	if err != nil {
+		panic(err.Error())
+	}
+
+	pipeline := ParsePipeline(data)
+	podDefinition := NewPodDefinition(pipeline, &pipeline.Steps[0])
+
+	keys := podDefinition.Step.Inputs[0].Keys
+	if len(keys) != 3 {
+		t.Errorf("Failed to parse keys, got: %v, want: 3.", len(keys))
+	}
+
+	stepPodBuffer := podDefinition.compile()
+
+	pod := &v1.Pod{}
+	yaml.NewYAMLOrJSONDecoder(stepPodBuffer, 4096).Decode(pod)
+
+	if pod.Name != "sample-keys-version1-step1-master" {
+		t.Errorf("Pod name is %s", pod.Name)
+	}
+
+	if pod.Spec.Containers[0].Image != pipeline.Steps[0].Image {
+		t.Errorf("First image is %s", pod.Spec.Containers[0].Image)
+	}
+
+	command := pod.Spec.Containers[1].Command[2]
+	if !strings.Contains(command, "--keys file1.json,file2.json,folder/file3.json") {
+		t.Errorf("Failed to build paddle get, keys flag is missing")
+	}
+}
