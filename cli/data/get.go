@@ -93,7 +93,8 @@ func CopyPathToDestinationWithoutS3Path(bucket string, step string, version stri
 
 func copyPathToDestination(source S3Path, destination string, keys []string, subdir string) {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
+		//SharedConfigState: session.SharedConfigEnable,
+		Profile: "s3_profile",
 	}))
 
 	/*

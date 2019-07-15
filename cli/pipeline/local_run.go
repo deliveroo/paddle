@@ -43,7 +43,6 @@ $ paddle pipeline local-run test_pipeline.yaml
 var localRunCmdFlags *localRunCmdFlagsStruct
 
 func init() {
-	fmt.Println("w000000t")
 	localRunCmdFlags = &localRunCmdFlagsStruct{}
 	localRunCmd.Flags().StringVarP(&localRunCmdFlags.StepName, "step", "s", "", "Single step to execute")
 	localRunCmd.Flags().StringVarP(&localRunCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
