@@ -95,10 +95,9 @@ func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinition
 	//podDefinition := NewPodDefinition(pipeline, step)
 	for _, input := range step.Inputs {
 		data.CopyPathToDestinationWithoutS3Path(
-			input.Bucket, input.Step, input.Version, input.Branch, input.Path,
+			pipeline.Bucket, input.Step, input.Version, input.Branch, input.Path,
 			"inputs", []string{}, "",
 		)
-		fmt.Printf("%+v", input)
 	}
 	return nil
 }

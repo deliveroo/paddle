@@ -85,7 +85,7 @@ func init() {
 func CopyPathToDestinationWithoutS3Path(bucket string, step string, version string, branch string, path string, destination string, files []string, subdir string) {
 	source := S3Path{
 		bucket: bucket,
-		path:   fmt.Sprintf("%s/%s/%s/%s/", step, version, branch, path),
+		path:   fmt.Sprintf("%s/%s/%s/%s", step, version, branch, path),
 	}
 
 	copyPathToDestination(source, destination, files, subdir)
@@ -93,8 +93,8 @@ func CopyPathToDestinationWithoutS3Path(bucket string, step string, version stri
 
 func copyPathToDestination(source S3Path, destination string, keys []string, subdir string) {
 	session := session.Must(session.NewSessionWithOptions(session.Options{
-		//SharedConfigState: session.SharedConfigEnable,
-		Profile: "s3_profile",
+		Config:            aws.Config{Region: aws.String("eu-west-1")},
+		SharedConfigState: session.SharedConfigEnable,
 	}))
 
 	/*
