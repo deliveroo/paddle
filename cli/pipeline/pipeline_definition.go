@@ -34,11 +34,14 @@ type PipelineDefinitionStep struct {
 }
 
 type PipelineDefinition struct {
-	Pipeline  string                   `yaml:"pipeline"`
-	Bucket    string                   `yaml:"bucket"`
-	Namespace string                   `yaml:"namespace"`
-	Steps     []PipelineDefinitionStep `yaml:"steps"`
-	Secrets   []string
+	GlobalEnv  map[string]map[string]string `yaml:"global_env"`
+	JenkinsEnv map[string]string            `yaml:"jenkins_env"`
+	Pipeline   string                       `yaml:"pipeline"`
+	Bucket     string                       `yaml:"bucket"`
+	Namespace  string                       `yaml:"namespace"`
+	EcrPath    string                       `yaml:"ecr_path"`
+	Steps      []PipelineDefinitionStep     `yaml:"steps"`
+	Secrets    []string
 }
 
 func ParsePipeline(data []byte) *PipelineDefinition {
@@ -56,7 +59,18 @@ func ParsePipeline(data []byte) *PipelineDefinition {
 		pipeline.Bucket = matches[1]
 	}
 
+	pipeline.parseGlobalEnv()
+	pipeline.parseJenkinsEnv()
+	//pipeline.JenkinsEnv = parseJenkinsEnv(pipeline.JenkinsEnv)
+
 	return &pipeline
+}
+
+func (p *PipelineDefinition) parseJenkinsEnv() {
+	p.JenkinsEnv = map[string]string{}
+}
+
+func (p *PipelineDefinition) parseGlobalEnv() {
 }
 
 func (p *PipelineDefinitionStep) OverrideTag(tag string) {
@@ -64,7 +78,7 @@ func (p *PipelineDefinitionStep) OverrideTag(tag string) {
 		currentParts := strings.Split(p.Image, ":")
 		parts := []string{
 			currentParts[0],
-			tag,
+			sanitizeName(tag),
 		}
 		p.Image = strings.Join(parts, ":")
 	}

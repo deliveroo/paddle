@@ -1,13 +1,24 @@
 package pipeline
 
 import (
+	"bufio"
+	"context"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"os"
+	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/deliveroo/paddle/cli/data"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
+	git "gopkg.in/src-d/go-git.v4"
 )
 
 type localRunCmdFlagsStruct struct {
@@ -59,7 +70,6 @@ func init() {
 }
 
 func localRunPipeline(path string, flags *localRunCmdFlagsStruct) {
-	fmt.Println("waaaaaat")
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		panic(err.Error())
@@ -89,15 +99,119 @@ func localRunPipeline(path string, flags *localRunCmdFlagsStruct) {
 	}
 }
 
+func findBaseGitFolder() string {
+	relPath := "/"
+	found := false
+	basePath, _ := os.Getwd()
+	for !found {
+		files, err := ioutil.ReadDir(basePath + relPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, f := range files {
+			if f.Name() == ".git" {
+				found = true
+				break
+			}
+		}
+		if !found {
+			relPath = relPath + "../"
+		}
+	}
+	return relPath
+}
+
+func buildDockerFail() {
+	ctx := context.Background()
+	getContext := func(filePath string) io.Reader {
+		// Use homedir.Expand to resolve paths like '~/repos/myrepo'
+		filePath, _ = homedir.Expand(filePath)
+		ctx, _ := archive.TarWithOptions(filePath, &archive.TarOptions{})
+		return ctx
+	}
+
+	cli, err := client.NewClientWithOpts(client.WithVersion("1.39"))
+	buildOptions := types.ImageBuildOptions{
+		//Dockerfile: dockerFile, // optional, is the default
+	}
+	fmt.Println(cli.ImageBuild(ctx, getContext("."), buildOptions))
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(cli.ContainerList(ctx, types.ContainerListOptions{}))
+}
+
+func runAsyncCmd(outputPrefix string, cmdName string, cmdArgs ...string) {
+	cmd := exec.Command(cmdName, cmdArgs...) //"docker-compose", "build", dockerImageName)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		log.Fatalf("could not get stderr pipe: %v", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatalf("could not get stdout pipe: %v", err)
+	}
+	go func() {
+		merged := io.MultiReader(stderr, stdout)
+		scanner := bufio.NewScanner(merged)
+		for scanner.Scan() {
+			msg := scanner.Text()
+			fmt.Printf("%s | %s\n", outputPrefix, msg)
+		}
+	}()
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("could not run cmd: %v", err)
+	}
+	if err := cmd.Wait(); err != nil {
+		log.Fatalf("could not wait for cmd: %v", err)
+	}
+}
+
 func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *localRunCmdFlagsStruct) error {
 	log.Printf("[paddle] Running step %s", step.Step)
+	//fmt.Println(pipeline.JenkinsEnv)
+	//fmt.Println(pipeline.GlobalEnv)
 
-	//podDefinition := NewPodDefinition(pipeline, step)
+	// Do checksum to not download unless needed
 	for _, input := range step.Inputs {
 		data.CopyPathToDestinationWithoutS3Path(
 			pipeline.Bucket, input.Step, input.Version, input.Branch, input.Path,
 			"inputs", []string{}, "",
 		)
 	}
+
+	relPath := findBaseGitFolder()
+	r, err := git.PlainOpen("." + relPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ref, _ := r.Head()
+	branchName := ref.Name().Short()
+	fmt.Println(branchName)
+	dockerImageName := strings.Split(strings.Split(step.Image, "/")[1], ":")[0]
+	fmt.Println(dockerImageName)
+	fmt.Println(step.Image)
+
+	res, err := exec.Command("aws", "ecr", "get-login", "--profile", "k8s_production", "--no-include-email", "--region", "eu-west-1").Output()
+
+	s := strings.Split(strings.TrimSuffix(string(res), "\n"), " ")
+	runAsyncCmd("aws login", s[0], s[1:]...)
+	runAsyncCmd("docker build", "docker-compose", "build", dockerImageName)
+
+	//runAsyncCmd("docker build", "docker", "tag", dockerImageName+":latest", step.Image)
+	//runAsyncCmd("docker build", "docker", "push", step.Image)
+
+	fmt.Println("done")
+
+	//podDefinition := NewPodDefinition(pipeline, step)
+	for _, cmd := range step.Commands {
+		arr := []string{
+			"run", "-e", "INPUT_PATH=v3/inputs/", "-e", "OUTPUT_PATH=v3/outputs/", dockerImageName}
+		arr = append(arr, strings.Split(cmd, " ")...)
+		runAsyncCmd(step.Step, "docker-compose", arr...)
+	}
+
 	return nil
 }
