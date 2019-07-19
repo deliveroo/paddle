@@ -164,9 +164,6 @@ func runAsyncCmd(outputPrefix string, cmdName string, cmdArgs ...string) {
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("could not run cmd: %v", err)
 	}
-	if err := cmd.Wait(); err != nil {
-		log.Fatalf("could not wait for cmd: %v", err)
-	}
 }
 
 func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *localRunCmdFlagsStruct) error {
