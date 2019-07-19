@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deliveroo/paddle/cli/data"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
@@ -144,6 +143,7 @@ func buildDockerFail() {
 
 func runAsyncCmd(outputPrefix string, cmdName string, cmdArgs ...string) {
 	cmd := exec.Command(cmdName, cmdArgs...) //"docker-compose", "build", dockerImageName)
+	fmt.Println(cmd)
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
@@ -154,7 +154,7 @@ func runAsyncCmd(outputPrefix string, cmdName string, cmdArgs ...string) {
 		log.Fatalf("could not get stdout pipe: %v", err)
 	}
 	go func() {
-		merged := io.MultiReader(stderr, stdout)
+		merged := io.MultiReader(stdout, stderr)
 		scanner := bufio.NewScanner(merged)
 		for scanner.Scan() {
 			msg := scanner.Text()
@@ -172,12 +172,12 @@ func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinition
 	//fmt.Println(pipeline.GlobalEnv)
 
 	// Do checksum to not download unless needed
-	for _, input := range step.Inputs {
-		data.CopyPathToDestinationWithoutS3Path(
-			pipeline.Bucket, input.Step, input.Version, input.Branch, input.Path,
-			"inputs", []string{}, "",
-		)
-	}
+	//for _, input := range step.Inputs {
+	//data.CopyPathToDestinationWithoutS3Path(
+	//pipeline.Bucket, input.Step, input.Version, input.Branch, input.Path,
+	//"inputs", []string{}, "",
+	//)
+	//}
 
 	relPath := findBaseGitFolder()
 	r, err := git.PlainOpen("." + relPath)
@@ -191,11 +191,11 @@ func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinition
 	fmt.Println(dockerImageName)
 	fmt.Println(step.Image)
 
-	res, err := exec.Command("aws", "ecr", "get-login", "--profile", "k8s_production", "--no-include-email", "--region", "eu-west-1").Output()
+	//res, err := exec.Command("aws", "ecr", "get-login", "--profile", "k8s_production", "--no-include-email", "--region", "eu-west-1").Output()
 
-	s := strings.Split(strings.TrimSuffix(string(res), "\n"), " ")
-	runAsyncCmd("aws login", s[0], s[1:]...)
-	runAsyncCmd("docker build", "docker-compose", "build", dockerImageName)
+	//s := strings.Split(strings.TrimSuffix(string(res), "\n"), " ")
+	//runAsyncCmd("aws login", s[0], s[1:]...)
+	//runAsyncCmd("docker build", "docker-compose", "build", dockerImageName)
 
 	//runAsyncCmd("docker build", "docker", "tag", dockerImageName+":latest", step.Image)
 	//runAsyncCmd("docker build", "docker", "push", step.Image)
@@ -205,7 +205,7 @@ func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinition
 	//podDefinition := NewPodDefinition(pipeline, step)
 	for _, cmd := range step.Commands {
 		arr := []string{
-			"run", "-e", "INPUT_PATH=v3/inputs/", "-e", "OUTPUT_PATH=v3/outputs/", dockerImageName}
+			"run", "-T", "-e", "INPUT_PATH=/app/inputs/", "-e", "OUTPUT_PATH=/app/outputs/", dockerImageName}
 		arr = append(arr, strings.Split(cmd, " ")...)
 		runAsyncCmd(step.Step, "docker-compose", arr...)
 	}
