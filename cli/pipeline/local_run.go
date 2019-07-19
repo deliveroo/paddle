@@ -205,7 +205,7 @@ func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinition
 	//podDefinition := NewPodDefinition(pipeline, step)
 	for _, cmd := range step.Commands {
 		arr := []string{
-			"run", "-T", "-e", "INPUT_PATH=/app/inputs/", "-e", "OUTPUT_PATH=/app/outputs/", dockerImageName}
+			"run", "-T", "-e", "INPUT_PATH=/app/inputs", "-e", "OUTPUT_PATH=/app/outputs", dockerImageName}
 		arr = append(arr, strings.Split(cmd, " ")...)
 		runAsyncCmd(step.Step, "docker-compose", arr...)
 	}
