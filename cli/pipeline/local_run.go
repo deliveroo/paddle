@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/deliveroo/paddle/cli/data"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
@@ -172,12 +173,12 @@ func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinition
 	//fmt.Println(pipeline.GlobalEnv)
 
 	// Do checksum to not download unless needed
-	//for _, input := range step.Inputs {
-	//data.CopyPathToDestinationWithoutS3Path(
-	//pipeline.Bucket, input.Step, input.Version, input.Branch, input.Path,
-	//"inputs", []string{}, "",
-	//)
-	//}
+	for _, input := range step.Inputs {
+		data.CopyPathToDestinationWithoutS3Path(
+			pipeline.Bucket, input.Step, input.Version, input.Branch, input.Path,
+			"inputs", []string{}, "",
+		)
+	}
 
 	relPath := findBaseGitFolder()
 	r, err := git.PlainOpen("." + relPath)
