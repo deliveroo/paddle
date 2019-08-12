@@ -1,6 +1,7 @@
 package pipeline
 
 import (
+	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -34,14 +35,20 @@ type PipelineDefinitionStep struct {
 }
 
 type PipelineDefinition struct {
-	GlobalEnv  map[string]map[string]string `yaml:"global_env"`
-	JenkinsEnv map[string]string            `yaml:"jenkins_env"`
-	Pipeline   string                       `yaml:"pipeline"`
-	Bucket     string                       `yaml:"bucket"`
-	Namespace  string                       `yaml:"namespace"`
-	EcrPath    string                       `yaml:"ecr_path"`
-	Steps      []PipelineDefinitionStep     `yaml:"steps"`
-	Secrets    []string
+	GlobalEnv       map[string]map[string]string `yaml:"global_env"`
+	JenkinsEnv      map[string]string            `yaml:"jenkins_env"`
+	Pipeline        string                       `yaml:"pipeline"`
+	Bucket          string                       `yaml:"bucket"`
+	Namespace       string                       `yaml:"namespace"`
+	EcrPath         string                       `yaml:"ecr_path"`
+	Steps           []PipelineDefinitionStep     `yaml:"steps"`
+	Secrets         []string
+	Env             []string
+	CurrentBranch   string
+	BucketOverrides []string
+	OverrideInputs  bool
+	ImageTag        string
+	StepBranch      string
 }
 
 func ParsePipeline(data []byte) *PipelineDefinition {
@@ -59,18 +66,49 @@ func ParsePipeline(data []byte) *PipelineDefinition {
 		pipeline.Bucket = matches[1]
 	}
 
+	pipeline.CurrentBranch = findGitBranch()
+	pipeline.parseImageTag()
+	pipeline.parseStepBranch()
+
+	fmt.Println("-------------")
 	pipeline.parseGlobalEnv()
+	fmt.Println("-------------")
 	pipeline.parseJenkinsEnv()
-	//pipeline.JenkinsEnv = parseJenkinsEnv(pipeline.JenkinsEnv)
 
 	return &pipeline
 }
 
+func (p *PipelineDefinition) parseImageTag() {
+	// make it lowercase and replace /_ with dashes -
+	p.ImageTag = sanitizeName(p.CurrentBranch)
+}
+
+func (p *PipelineDefinition) parseStepBranch() {
+	p.StepBranch = sanitizeName(p.CurrentBranch)
+}
+
 func (p *PipelineDefinition) parseJenkinsEnv() {
-	p.JenkinsEnv = map[string]string{}
+
 }
 
 func (p *PipelineDefinition) parseGlobalEnv() {
+	for envName, branchMapping := range p.GlobalEnv {
+		for branch, value := range branchMapping {
+			if p.CurrentBranch == branch || branch == "other" {
+				res := fmt.Sprintf("%s:%s", envName, value)
+				switch envName {
+				case "replace_buckets":
+					p.BucketOverrides = append(p.BucketOverrides, res)
+				case "override_inputs":
+					p.OverrideInputs = value == "true"
+				case "bucket_name":
+					p.Bucket = value
+				default:
+					p.Env = append(p.Env, res)
+				}
+			}
+		}
+	}
 }
 
 func (p *PipelineDefinitionStep) OverrideTag(tag string) {

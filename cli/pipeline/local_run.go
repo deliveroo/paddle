@@ -2,7 +2,6 @@ package pipeline
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,10 +12,6 @@ import (
 	"time"
 
 	"github.com/deliveroo/paddle/cli/data"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/archive"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	git "gopkg.in/src-d/go-git.v4"
 )
@@ -30,8 +25,6 @@ type localRunCmdFlagsStruct struct {
 	OverrideInputs     bool
 	TailLogs           bool
 	Secrets            []string
-	Env                []string
-	BucketOverrides    []string
 	DeletePollInterval time.Duration
 	StartTimeout       time.Duration
 }
@@ -56,15 +49,11 @@ var localRunCmdFlags *localRunCmdFlagsStruct
 func init() {
 	localRunCmdFlags = &localRunCmdFlagsStruct{}
 	localRunCmd.Flags().StringVarP(&localRunCmdFlags.StepName, "step", "s", "", "Single step to execute")
-	localRunCmd.Flags().StringVarP(&localRunCmdFlags.BucketName, "bucket", "b", "", "Bucket name")
 	localRunCmd.Flags().StringVarP(&localRunCmdFlags.ImageTag, "tag", "t", "", "Image tag (overrides the one defined in the pipeline)")
 	localRunCmd.Flags().StringVarP(&localRunCmdFlags.StepBranch, "step-branch", "B", "", "Step branch (overrides the one defined in the pipeline)")
 	localRunCmd.Flags().StringVarP(&localRunCmdFlags.StepVersion, "step-version", "V", "", "Step version (overrides the one defined in the pipeline)")
 	localRunCmd.Flags().BoolVarP(&localRunCmdFlags.TailLogs, "logs", "l", true, "Tail logs")
-	localRunCmd.Flags().BoolVarP(&localRunCmdFlags.OverrideInputs, "override-inputs", "I", false, "Override input version/branch (only makes sense to use with -B or -V)")
 	localRunCmd.Flags().StringSliceVarP(&localRunCmdFlags.Secrets, "secret", "S", []string{}, "Secret to pull into the environment (in the form ENV_VAR:secret_store:key_name)")
-	localRunCmd.Flags().StringSliceVarP(&localRunCmdFlags.Env, "env", "e", []string{}, "Environment variables to set (in the form name:value)")
-	localRunCmd.Flags().StringSliceVar(&localRunCmdFlags.BucketOverrides, "replace-input-buckets", []string{}, "Override input bucket names (in the form original_bucket_name:new_bucket_name)")
 	localRunCmdFlags.DeletePollInterval = defaultDeletePollInterval
 	localRunCmdFlags.StartTimeout = defaultStartTimeout
 }
@@ -87,10 +76,10 @@ func localRunPipeline(path string, flags *localRunCmdFlagsStruct) {
 			step.OverrideTag(flags.ImageTag)
 		}
 		if flags.StepBranch != "" {
-			step.OverrideBranch(flags.StepBranch, flags.OverrideInputs)
+			step.OverrideBranch(flags.StepBranch, pipeline.OverrideInputs)
 		}
 		if flags.StepVersion != "" {
-			step.OverrideVersion(flags.StepVersion, flags.OverrideInputs)
+			step.OverrideVersion(flags.StepVersion, pipeline.OverrideInputs)
 		}
 		err = localRunPipelineStep(pipeline, &step, flags)
 		if err != nil {
@@ -121,27 +110,6 @@ func findBaseGitFolder() string {
 	return relPath
 }
 
-func buildDockerFail() {
-	ctx := context.Background()
-	getContext := func(filePath string) io.Reader {
-		// Use homedir.Expand to resolve paths like '~/repos/myrepo'
-		filePath, _ = homedir.Expand(filePath)
-		ctx, _ := archive.TarWithOptions(filePath, &archive.TarOptions{})
-		return ctx
-	}
-
-	cli, err := client.NewClientWithOpts(client.WithVersion("1.39"))
-	buildOptions := types.ImageBuildOptions{
-		//Dockerfile: dockerFile, // optional, is the default
-	}
-	fmt.Println(cli.ImageBuild(ctx, getContext("."), buildOptions))
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(cli.ContainerList(ctx, types.ContainerListOptions{}))
-}
-
 func runAsyncCmd(outputPrefix string, cmdName string, cmdArgs ...string) {
 	cmd := exec.Command(cmdName, cmdArgs...) //"docker-compose", "build", dockerImageName)
 	fmt.Println(cmd)
@@ -167,10 +135,20 @@ func runAsyncCmd(outputPrefix string, cmdName string, cmdArgs ...string) {
 	}
 }
 
+func findGitBranch() string {
+	relPath := findBaseGitFolder()
+	r, err := git.PlainOpen("." + relPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	ref, _ := r.Head()
+	branchName := ref.Name().Short()
+
+	return branchName
+}
+
 func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *localRunCmdFlagsStruct) error {
 	log.Printf("[paddle] Running step %s", step.Step)
-	//fmt.Println(pipeline.JenkinsEnv)
-	//fmt.Println(pipeline.GlobalEnv)
 
 	// Do checksum to not download unless needed
 	for _, input := range step.Inputs {
@@ -180,14 +158,7 @@ func localRunPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinition
 		)
 	}
 
-	relPath := findBaseGitFolder()
-	r, err := git.PlainOpen("." + relPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	ref, _ := r.Head()
-	branchName := ref.Name().Short()
-	fmt.Println(branchName)
+	fmt.Println(pipeline.CurrentBranch)
 	dockerImageName := strings.Split(strings.Split(step.Image, "/")[1], ":")[0]
 	fmt.Println(dockerImageName)
 	fmt.Println(step.Image)

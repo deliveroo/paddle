@@ -128,8 +128,8 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	log.Printf("[paddle] Running step %s", step.Step)
 	podDefinition := NewPodDefinition(pipeline, step)
 	podDefinition.parseSecrets(flags.Secrets)
-	podDefinition.parseEnv(flags.Env)
-	podDefinition.setBucketOverrides(flags.BucketOverrides)
+	podDefinition.parseEnv(pipeline.Env)
+	podDefinition.setBucketOverrides(pipeline.BucketOverrides)
 
 	stepPodBuffer := podDefinition.compile()
 	pod := &v1.Pod{}

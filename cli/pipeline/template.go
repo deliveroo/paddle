@@ -122,7 +122,7 @@ spec:
         {{ end }}
     -
       name: paddle
-      image: "219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest"
+      image: "219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:{{ .PaddleVersion}"
       imagePullPolicy: Always
       volumeMounts:
         -
