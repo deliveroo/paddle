@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -102,6 +103,11 @@ func copyPathToDestination(source S3Path, destination string, keys []string, sub
 
 	fmt.Println("Copying " + source.path + " to " + destination)
 	copy(session, source, destination, keys)
+	f, err := os.OpenFile("/data/output/inputs.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	f.WriteString(source.path + "\n")
 }
 
 func readHEAD(session *session.Session, source S3Path) string {
