@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/gookit/color"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -143,7 +144,7 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 	return out, nil
 }
 
-func TailLogs(ctx context.Context, c kubernetes.Interface, pod *v1.Pod, container string) {
+func TailLogs(ctx context.Context, c kubernetes.Interface, pod *v1.Pod, container string, colorLog color.Color256) {
 	pods := c.CoreV1().Pods(pod.Namespace)
 
 	req := pods.GetLogs(pod.Name, &v1.PodLogOptions{
@@ -183,7 +184,7 @@ func TailLogs(ctx context.Context, c kubernetes.Interface, pod *v1.Pod, containe
 
 			str := string(line)
 
-			log.Printf("[%s/%s]: %s", pod.Name, container, str)
+			colorLog.Printf("[%s/%s]: %s", pod.Name, container, str)
 		}
 	}()
 }

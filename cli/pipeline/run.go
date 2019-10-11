@@ -19,8 +19,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"sync"
 	"time"
 
+	"github.com/gookit/color"
 	"github.com/spf13/cobra"
 	v1 "k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
@@ -117,16 +119,30 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 		if flags.StepVersion != "" {
 			step.OverrideVersion(flags.StepVersion, flags.OverrideInputs)
 		}
-		err = runPipelineStep(pipeline, &step, flags)
-		if err != nil {
-			logFatalf("[paddle] %s", err.Error())
+		lr := 0
+		var wg sync.WaitGroup
+		wg.Add(5)
+		for lr < 5 {
+			go func(lr int) {
+				defer wg.Done()
+				fmt.Printf("%d", lr)
+				err = runPipelineStep(pipeline, &step, flags, lr)
+				if err != nil {
+					fmt.Printf("[paddle] %s", err.Error())
+				}
+			}(lr)
+			lr++
 		}
+		wg.Wait()
 	}
 }
 
-func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *runCmdFlagsStruct) error {
-	log.Printf("[paddle] Running step %s", step.Step)
+func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *runCmdFlagsStruct, lr int) error {
+	colors := []int{160, 215, 120, 26, 229, 100}
+	c := color.C256(uint8(colors[lr]))
+	c.Printf("[paddle] Running step %s", step.Step)
 	podDefinition := NewPodDefinition(pipeline, step)
+	podDefinition.PodName += fmt.Sprintf("-lr%d", lr)
 	podDefinition.parseSecrets(flags.Secrets)
 	podDefinition.parseEnv(flags.Env)
 	podDefinition.setBucketOverrides(flags.BucketOverrides)
@@ -181,22 +197,22 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		case e := <-watch:
 			switch e.Type {
 			case Added:
-				log.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
+				c.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
 				containers[e.Container] = true
 				if flags.TailLogs {
-					TailLogs(ctx, clientset, e.Pod, e.Container)
+					TailLogs(ctx, clientset, e.Pod, e.Container, c)
 				}
 			case Deleted:
-				log.Println("[paddle] Pod deleted")
+				c.Println("[paddle] Pod deleted")
 				return errors.New("pod was deleted unexpectedly")
 			case Removed:
 				if !removed[e.Container] {
-					log.Printf("[paddle] Container removed: %s", e.Container)
+					c.Printf("[paddle] Container removed: %s", e.Container)
 				}
 				removed[e.Container] = true
 				continue
 			case Completed:
-				log.Printf("[paddle] Pod execution completed")
+				c.Printf("[paddle] Pod execution completed")
 				if podDefinition.needsVolume() {
 					deleteVolumeClaim(clientset, podDefinition, flags)
 				}
@@ -206,13 +222,13 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 				var msg string
 				if e.Container != "" {
 					if e.Message != "" {
-						msg = fmt.Sprintf("Container %s/%s failed: '%s'", pod.Name, e.Container, e.Message)
+						msg = c.Sprintf("Container %s/%s failed: '%s'", pod.Name, e.Container, e.Message)
 					} else {
-						msg = fmt.Sprintf("Container %s/%s failed", pod.Name, e.Container)
+						msg = c.Sprintf("Container %s/%s failed", pod.Name, e.Container)
 					}
 					_, present := containers[e.Container]
 					if !present && flags.TailLogs { // container died before being added
-						TailLogs(ctx, clientset, e.Pod, e.Container)
+						TailLogs(ctx, clientset, e.Pod, e.Container, c)
 						time.Sleep(3 * time.Second) // give it time to tail logs
 					}
 				} else {
@@ -235,7 +251,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		}
 	}
 
-	log.Printf("[paddle] Finishing pod execution")
+	c.Printf("[paddle] Finishing pod execution")
 	return nil
 }
 
