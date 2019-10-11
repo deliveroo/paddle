@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -138,8 +139,9 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 }
 
 func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *runCmdFlagsStruct, lr int) error {
-	colors := []int{160, 215, 120, 26, 229, 100}
-	c := color.C256(uint8(colors[lr]))
+	//colors := []int{160, 215, 120, 26, 229, 100}
+	//c := color.C256(uint8(colors[lr]))
+	c := color.C256(uint8(rand.Intn(256)))
 	c.Printf("[paddle] Running step %s", step.Step)
 	podDefinition := NewPodDefinition(pipeline, step)
 	podDefinition.PodName += fmt.Sprintf("-lr%d", lr)
