@@ -33,8 +33,8 @@ type WatchEvent struct {
 	Message   string
 }
 
-func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-chan WatchEvent, error) {
-	log.Printf("podname: %s", watchPod.Name)
+func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod, colorLog color.Color256) (<-chan WatchEvent, error) {
+	colorLog.Printf("podname: %s\n", watchPod.Name)
 	podSelector, err := fields.ParseSelector("metadata.name=" + watchPod.Name)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 
 	parsePodStatus := func(pod *v1.Pod) {
 		if pod.Status.Phase == v1.PodSucceeded {
-			log.Println("Status: succeded")
+			colorLog.Println("Status: succeded")
 			out <- WatchEvent{Completed, pod, "", ""}
 		} else if pod.Status.Phase == v1.PodFailed {
 			reason := ""
@@ -110,7 +110,7 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 				case watch.Deleted:
 					out <- WatchEvent{Deleted, pod, "", ""}
 				case watch.Error:
-					log.Printf("Pod error")
+					colorLog.Printf("Pod error")
 				}
 			case <-ctx.Done():
 				watcher.Stop()
@@ -129,9 +129,9 @@ func Watch(ctx context.Context, c kubernetes.Interface, watchPod *v1.Pod) (<-cha
 					parsePodStatus(pod)
 				} else {
 					if err != nil {
-						log.Printf("Error polling pod status: %s\n", err.Error())
+						colorLog.Printf("Error polling pod status: %s\n", err.Error())
 					} else {
-						log.Println("No pod status")
+						colorLog.Println("No pod status")
 					}
 				}
 			case <-ctx.Done():

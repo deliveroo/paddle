@@ -126,7 +126,6 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 		for lr < 5 {
 			go func(lr int) {
 				defer wg.Done()
-				fmt.Printf("%d", lr)
 				err = runPipelineStep(pipeline, &step, flags, lr)
 				if err != nil {
 					fmt.Printf("[paddle] %s", err.Error())
@@ -141,7 +140,9 @@ func runPipeline(path string, flags *runCmdFlagsStruct) {
 func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep, flags *runCmdFlagsStruct, lr int) error {
 	//colors := []int{160, 215, 120, 26, 229, 100}
 	//c := color.C256(uint8(colors[lr]))
-	c := color.C256(uint8(rand.Intn(256)))
+	randn := rand.Intn(255)
+	c := color.C256(uint8(rand.Intn(255) + 1))
+	c.Printf("%d\n", randn)
 	c.Printf("[paddle] Running step %s", step.Step)
 	podDefinition := NewPodDefinition(pipeline, step)
 	podDefinition.PodName += fmt.Sprintf("-lr%d", lr)
@@ -158,7 +159,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 
 	pods := clientset.CoreV1().Pods(pipeline.Namespace)
 
-	err = deleteAndWait(clientset, podDefinition, flags)
+	err = deleteAndWait(clientset, podDefinition, flags, c)
 	if err != nil {
 		return err
 	}
@@ -173,7 +174,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	watch, err := Watch(ctx, clientset, pod)
+	watch, err := Watch(ctx, clientset, pod, c)
 	if err != nil {
 		return err
 	}
@@ -199,7 +200,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		case e := <-watch:
 			switch e.Type {
 			case Added:
-				c.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
+				c.Printf("[paddle] Container %s/%s starting\n", pod.Name, e.Container)
 				containers[e.Container] = true
 				if flags.TailLogs {
 					TailLogs(ctx, clientset, e.Pod, e.Container, c)
@@ -218,7 +219,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 				if podDefinition.needsVolume() {
 					deleteVolumeClaim(clientset, podDefinition, flags)
 				}
-				deleteAndWait(clientset, podDefinition, flags)
+				deleteAndWait(clientset, podDefinition, flags, c)
 				return nil
 			case Failed:
 				var msg string
@@ -257,7 +258,7 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 	return nil
 }
 
-func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct) error {
+func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *runCmdFlagsStruct, colorLog color.Color256) error {
 	pods := clientset.CoreV1().Pods(podDefinition.Namespace)
 	deleting := false
 	var gracePeriod int64
@@ -268,7 +269,7 @@ func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *
 		if err != nil {
 			if k8errors.IsNotFound(err) {
 				if deleting {
-					log.Printf("[paddle] deleted pod %s", podDefinition.PodName)
+					colorLog.Printf("[paddle] deleted pod %s\n", podDefinition.PodName)
 				}
 				return true, nil
 			} else {
@@ -276,7 +277,7 @@ func deleteAndWait(c kubernetes.Interface, podDefinition *PodDefinition, flags *
 			}
 		}
 		if !deleting {
-			log.Printf("[paddle] deleting pod %s", podDefinition.PodName)
+			colorLog.Printf("[paddle] deleting pod %s\n", podDefinition.PodName)
 			deleting = true
 		}
 		return false, nil
