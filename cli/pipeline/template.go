@@ -84,7 +84,7 @@ spec:
         - "-c"
         - "while true; do if [ -e /data/first-step.txt ]; then ((
           {{ range $index, $command := .Step.Commands }}
-          ({{ $command }}) &&
+          ({{ $command }}) 2>&1 | tee /data/output/output-command-{{$index}}.log &&
           {{ end }}
           touch /data/main-passed.txt) || (touch /data/main-failed.txt && exit 1)) && touch /data/main.txt; break; fi; done"
       env:
