@@ -80,9 +80,10 @@ spec:
           cpu: "{{ .Step.Resources.CPU }}"
           memory: "{{ .Step.Resources.Memory }}"
       command:
-        - "/bin/sh"
+        - "/bin/bash"
         - "-c"
-        - "while true; do if [ -e /data/first-step.txt ]; then ((
+        - "set -o pipefail &&
+          while true; do if [ -e /data/first-step.txt ]; then ((
           {{ range $index, $command := .Step.Commands }}
           ({{ $command }}) 2>&1 | tee /data/output/output-command-{{$index}}.log &&
           {{ end }}
