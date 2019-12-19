@@ -31,6 +31,12 @@ steps:
         version: version1
         branch: master
         path: HEAD
+      -
+        step: step2
+        version: version1
+        branch: master
+        path: HEAD
+        bucket: lord_buckethead
     image: 219541440308.dkr.ecr.eu-west-1.amazonaws.com/paddlecontainer:latest
     branch: master
     commands:
