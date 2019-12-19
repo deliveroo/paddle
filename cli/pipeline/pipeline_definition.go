@@ -14,13 +14,13 @@ type PipelineDefinitionStep struct {
 	Branch  string `yaml:"branch" json:"branch"`
 	Image   string `yaml:"image" json:"image"`
 	Inputs  []struct {
-		Step    string `yaml:"step" json:"step"`
-		Version string `yaml:"version" json:"version"`
-		Branch  string `yaml:"branch" json:"branch"`
-		Path    string `yaml:"path" json:"path"`
-		Bucket  string `yaml:"bucket" json:"bucket"`
+		Step    string   `yaml:"step" json:"step"`
+		Version string   `yaml:"version" json:"version"`
+		Branch  string   `yaml:"branch" json:"branch"`
+		Path    string   `yaml:"path" json:"path"`
+		Bucket  string   `yaml:"bucket" json:"bucket"`
 		Keys    []string `yaml:"keys" json:"keys"`
-		Subdir  string `yaml:"subdir" json:"subdir"`
+		Subdir  string   `yaml:"subdir" json:"subdir"`
 	} `yaml:"inputs" json:"inputs"`
 	Commands  []string `yaml:"commands" json:"commands"`
 	Resources struct {
@@ -85,7 +85,11 @@ func (p *PipelineDefinitionStep) OverrideBranch(branch string, overrideInputs bo
 
 		if overrideInputs {
 			for i := range p.Inputs {
-				p.Inputs[i].Branch = branch
+				// If a bucket is passed in don't overwrite the branch as it's reaching
+				// into another pipeline's output.
+				if p.Inputs[i].Bucket == "" {
+					p.Inputs[i].Branch = branch
+				}
 			}
 		}
 	}

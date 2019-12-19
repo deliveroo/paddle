@@ -92,4 +92,8 @@ func TestOverrideBranch(t *testing.T) {
 	if pipeline.Steps[1].Inputs[0].Branch != "foo" {
 		t.Errorf("Dependent input Branch is %s", pipeline.Steps[1].Inputs[0].Branch)
 	}
+
+	if pipeline.Steps[1].Inputs[2].Branch == "foo" {
+		t.Errorf("Branch is %s, should be lord_buckethead", pipeline.Steps[1].Branch)
+	}
 }
