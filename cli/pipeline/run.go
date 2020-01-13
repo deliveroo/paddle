@@ -186,7 +186,6 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 				log.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
 				for _, containerStatus := range fetchedPod.Status.ContainerStatuses {
 					if containerStatus.Name == e.Container {
-						log.Printf(containerStatus.ImageID)
 						log.Printf("[paddle] Container %s/%s image hash: %s", pod.Name, e.Container, strings.Split(containerStatus.ImageID, "@")[1])
 					}
 				}
