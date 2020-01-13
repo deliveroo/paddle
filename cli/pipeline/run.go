@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -181,7 +182,15 @@ func runPipelineStep(pipeline *PipelineDefinition, step *PipelineDefinitionStep,
 		case e := <-watch:
 			switch e.Type {
 			case Added:
+				fetchedPod, _ := pods.Get(podDefinition.PodName, metav1.GetOptions{})
 				log.Printf("[paddle] Container %s/%s starting", pod.Name, e.Container)
+				for _, containerStatus := range fetchedPod.Status.ContainerStatuses {
+					if containerStatus.Name == e.Container {
+						log.Printf(containerStatus.ImageID)
+						log.Printf("[paddle] Container %s/%s image hash: %s", pod.Name, e.Container, strings.Split(containerStatus.ImageID, "@")[1])
+					}
+				}
+
 				containers[e.Container] = true
 				if flags.TailLogs {
 					TailLogs(ctx, clientset, e.Pod, e.Container)
