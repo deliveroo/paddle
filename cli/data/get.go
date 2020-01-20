@@ -258,14 +258,9 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 }
 
 func store(obj *s3.GetObjectOutput, destination string) error {
-	err := os.MkdirAll(filepath.Dir(destination), 0777)
+	file, err := createFile(destination)
 	if err != nil {
-		return errors.Wrapf(err, "creating directory %s", filepath.Dir(destination))
-	}
-
-	file, err := os.Create(destination)
-	if err != nil {
-		return errors.Wrapf(err, "creating destination %s", file.Name())
+		return err
 	}
 	defer file.Close()
 
@@ -276,4 +271,17 @@ func store(obj *s3.GetObjectOutput, destination string) error {
 
 	fmt.Printf("%s -> %d bytes\n", file.Name(), bytes)
 	return nil
+}
+
+func createFile(destination string) (*os.File, error) {
+	err := os.MkdirAll(filepath.Dir(destination), 0777)
+	if err != nil {
+		return nil, errors.Wrapf(err, "creating directory %s", filepath.Dir(destination))
+	}
+
+	file, err := os.Create(destination)
+	if err != nil {
+		return nil, errors.Wrapf(err, "creating destination %s", file.Name())
+	}
+	return file, nil
 }
