@@ -243,27 +243,24 @@ func process(s3Client *s3.S3, src S3Path, basePath string, filePath string, sem 
 }
 
 func copyS3ObjectToFile(s3Client *s3.S3, src S3Path, filePath string, file *os.File) error {
-	out, err := getObject(s3Client, aws.String(src.bucket), &filePath, file)
+	err := getObject(s3Client, aws.String(src.bucket), &filePath, file)
 	if err != nil {
 		return err
 	}
 
-	defer out.Body.Close()
-
-	return storeS3ObjectToFile(out, file)
+	return nil
 }
 
-func getObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) (*s3.GetObjectOutput, error) {
+func getObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) error {
 	var (
 		err error
-		out *s3.GetObjectOutput
 	)
 
 	retries := s3Retries
 	for retries > 0 {
-		out, err = tryGetObject(s3Client, bucket, key, file)
+		_, err := tryGetObject(s3Client, bucket, key, file)
 		if err == nil {
-			return out, nil
+			return nil
 		}
 
 		retries--
@@ -272,7 +269,7 @@ func getObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) (*s3
 			time.Sleep(s3RetriesSleep)
 		}
 	}
-	return nil, err
+	return err
 }
 
 func tryGetObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) (*s3.GetObjectOutput, error) {
@@ -281,7 +278,13 @@ func tryGetObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) (
 		Key:    key,
 	})
 
-	return out, err
+	if err != nil {
+		return nil, err
+	}
+
+	defer out.Body.Close()
+
+	return out, storeS3ObjectToFile(out, file)
 }
 
 func storeS3ObjectToFile(obj *s3.GetObjectOutput, file *os.File) error {
