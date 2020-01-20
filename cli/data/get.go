@@ -243,15 +243,11 @@ func process(s3Client *s3.S3, src S3Path, basePath string, filePath string, sem 
 }
 
 func copyS3ObjectToFile(s3Client *s3.S3, src S3Path, filePath string, file *os.File) error {
-	return getObject(s3Client, aws.String(src.bucket), &filePath, file)
-}
-
-func getObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) error {
 	var err error
 
 	retries := s3Retries
 	for retries > 0 {
-		err = tryGetObject(s3Client, bucket, key, file)
+		err = tryGetObject(s3Client, aws.String(src.bucket), &filePath, file)
 		if err == nil {
 			// we're done
 			return nil
@@ -260,7 +256,7 @@ func getObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) erro
 		resetFileForWriting(file)
 		retries--
 		if retries > 0 {
-			fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", *key, err.Error(), s3RetriesSleep)
+			fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", filePath, err.Error(), s3RetriesSleep)
 			time.Sleep(s3RetriesSleep)
 		}
 	}
