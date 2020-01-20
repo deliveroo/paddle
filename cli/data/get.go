@@ -225,8 +225,8 @@ func process(s3Client *s3.S3, src S3Path, basePath string, filePath string, sem 
 	}
 	defer out.Body.Close()
 
-	target := basePath + "/" + strings.TrimPrefix(filePath, src.Dirname()+"/")
-	err = store(out, target)
+	destination := basePath + "/" + strings.TrimPrefix(filePath, src.Dirname()+"/")
+	err = store(out, destination)
 	if err != nil {
 		exitErrorf("%v", err)
 	}
