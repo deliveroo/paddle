@@ -14,9 +14,9 @@
 package data
 
 import (
-	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -111,17 +111,26 @@ func copyPathToDestination(source S3Path, destination string, keys []string, sub
 }
 
 func readHEAD(session *session.Session, source S3Path) string {
+	tempFile, err := ioutil.TempFile("", "HEAD")
+	if err != nil {
+		exitErrorf("Unable to create temp file: %v", err)
+	}
+
+	defer os.Remove(tempFile.Name())
+
 	svc := s3.New(session)
 
-	out, err := getObject(svc, aws.String(source.bucket), aws.String(source.path))
-
+	err = copyS3ObjectToFile(svc, source, source.path, tempFile)
 	if err != nil {
 		exitErrorf("Error reading HEAD: %v", err)
 	}
 
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(out.Body)
-	return buf.String()
+	contents, err := ioutil.ReadFile(tempFile.Name())
+	if err != nil {
+		exitErrorf("Error reading HEAD file: %v", err)
+	}
+
+	return string(contents)
 }
 
 func parseDestination(destination string, subdir string) string {
