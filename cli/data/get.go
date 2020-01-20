@@ -226,7 +226,14 @@ func process(s3Client *s3.S3, src S3Path, basePath string, filePath string, sem 
 	defer out.Body.Close()
 
 	destination := basePath + "/" + strings.TrimPrefix(filePath, src.Dirname()+"/")
-	err = store(out, destination)
+	file, err := createFile(destination)
+	if err != nil {
+		exitErrorf("%v", err)
+	}
+
+	defer file.Close()
+
+	err = storeS3ObjectToFile(out, file)
 	if err != nil {
 		exitErrorf("%v", err)
 	}
@@ -257,13 +264,7 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 	return nil, err
 }
 
-func store(obj *s3.GetObjectOutput, destination string) error {
-	file, err := createFile(destination)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
+func storeS3ObjectToFile(obj *s3.GetObjectOutput, file *os.File) error {
 	bytes, err := io.Copy(file, obj.Body)
 	if err != nil {
 		return errors.Wrapf(err, "copying file %s", file.Name())
