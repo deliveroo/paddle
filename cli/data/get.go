@@ -262,15 +262,15 @@ func store(obj *s3.GetObjectOutput, destination string) error {
 
 	file, err := os.Create(destination)
 	if err != nil {
-		return errors.Wrapf(err, "creating destination %s", destination)
+		return errors.Wrapf(err, "creating destination %s", file.Name())
 	}
 	defer file.Close()
 
 	bytes, err := io.Copy(file, obj.Body)
 	if err != nil {
-		return errors.Wrapf(err, "copying file %s", destination)
+		return errors.Wrapf(err, "copying file %s", file.Name())
 	}
 
-	fmt.Printf("%s -> %d bytes\n", destination, bytes)
+	fmt.Printf("%s -> %d bytes\n", file.Name(), bytes)
 	return nil
 }
