@@ -308,7 +308,7 @@ func createFile(destination string) (*os.File, error) {
 
 	file, err := os.Create(destination)
 	if err != nil {
-		return nil, errors.Wrapf(err, "creating destination %s", file.Name())
+		return nil, errors.Wrapf(err, "creating destination %s", destination)
 	}
 	return file, nil
 }
