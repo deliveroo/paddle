@@ -253,7 +253,13 @@ func copyS3ObjectToFile(s3Client *s3.S3, src S3Path, filePath string, file *os.F
 			return nil
 		}
 
-		resetFileForWriting(file)
+		resetErr := resetFileForWriting(file)
+		if resetErr != nil {
+			fmt.Printf("Unable to download object from S3 (%s) and unable reset temp file to try again (%s)",
+								err,
+								resetErr)
+			return errors.Wrapf(resetErr, "unable to reset temp file %s", file.Name())
+		}
 		retries--
 		if retries > 0 {
 			fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", filePath, err.Error(), s3RetriesSleep)
@@ -263,9 +269,10 @@ func copyS3ObjectToFile(s3Client *s3.S3, src S3Path, filePath string, file *os.F
 	return err
 }
 
-func resetFileForWriting(file *os.File) {
-	file.Truncate(0)
-	file.Seek(0, 0)
+func resetFileForWriting(file *os.File) error {
+	err := file.Truncate(0)
+	_, err = file.Seek(0, 0)
+	return err
 }
 
 func tryGetObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) error {
