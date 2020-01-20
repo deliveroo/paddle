@@ -261,10 +261,7 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 
 	retries := s3Retries
 	for retries > 0 {
-		out, err = s3Client.GetObject(&s3.GetObjectInput{
-			Bucket: bucket,
-			Key:    key,
-		})
+		out, err = tryGetObject(s3Client, bucket, key)
 		if err == nil {
 			return out, nil
 		}
@@ -276,6 +273,13 @@ func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutpu
 		}
 	}
 	return nil, err
+}
+
+func tryGetObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutput, error) {
+	return s3Client.GetObject(&s3.GetObjectInput{
+		Bucket: bucket,
+		Key:    key,
+	})
 }
 
 func storeS3ObjectToFile(obj *s3.GetObjectOutput, file *os.File) error {
