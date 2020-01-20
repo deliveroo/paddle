@@ -258,6 +258,7 @@ func getObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) erro
 			return nil
 		}
 
+		resetFileForWriting(file)
 		retries--
 		if retries > 0 {
 			fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", *key, err.Error(), s3RetriesSleep)
@@ -265,6 +266,11 @@ func getObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) erro
 		}
 	}
 	return err
+}
+
+func resetFileForWriting(file *os.File) {
+	file.Truncate(0)
+	file.Seek(0, 0)
 }
 
 func tryGetObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) error {
