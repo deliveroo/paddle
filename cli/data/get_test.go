@@ -2,6 +2,7 @@ package data
 
 import (
 	"github.com/aws/aws-sdk-go/service/s3"
+	"io/ioutil"
 	"testing"
 )
 
@@ -61,4 +62,13 @@ func TestFilterObjectsUsingNonExistentKeys(t *testing.T) {
 	if err == nil {
 		t.Error("It should return an error")
 	}
+}
+
+func Test_copyS3ObjectToFile_worksFirstTime(t *testing.T) {
+	var s3Client S3Getter = nil
+	s3Path := S3Path{bucket: "bucket", path: "path/"}
+	filePath := "foo/bar"
+	tempFile, _ := ioutil.TempFile("", "testDownload")
+
+	copyS3ObjectToFile(s3Client, s3Path, filePath, tempFile)
 }
