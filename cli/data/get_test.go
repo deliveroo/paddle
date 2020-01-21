@@ -1,7 +1,9 @@
 package data
 
 import (
+	"errors"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"io"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -65,11 +67,10 @@ func TestFilterObjectsUsingNonExistentKeys(t *testing.T) {
 	}
 }
 
-type S3GetterFromString struct {
+type s3GetterFromString struct {
 	s string
 }
-
-func (s3FromString S3GetterFromString) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+func (s3FromString s3GetterFromString) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
 	out := s3.GetObjectOutput {
 		Body: ioutil.NopCloser(strings.NewReader(s3FromString.s)),
 	}
@@ -77,7 +78,132 @@ func (s3FromString S3GetterFromString) GetObject(input *s3.GetObjectInput) (*s3.
 }
 
 func Test_copyS3ObjectToFile_worksFirstTime(t *testing.T) {
-	var s3Client S3Getter = S3GetterFromString{"foobar"}
+	var s3Client S3Getter = s3GetterFromString{"foobar"}
+
+	s3Path := S3Path{bucket: "bucket", path: "path/"}
+	filePath := "foo/bar"
+	tempFile, _ := ioutil.TempFile("", "testDownload")
+
+	err := copyS3ObjectToFile(s3Client, s3Path, filePath, tempFile)
+	if err != nil {
+		t.Errorf("Should have downloaded file successfully but didn't: %v", err)
+	}
+
+	bytes, err := ioutil.ReadFile(tempFile.Name())
+	if err != nil {
+		t.Errorf("Should be able to read from 'downloaded' file but couldn't %v", err)
+	}
+
+	if string(bytes) != "foobar" {
+		t.Errorf("File contents were incorrect.  Expected '%s' but got '%s'", "foobar", string(bytes))
+	}
+}
+
+type s3FailingGetter struct {
+}
+func (s3FailingGetter s3FailingGetter) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	return nil, errors.New("can't connect to S3")
+}
+
+func Test_copyS3ObjectToFile_failsToGetObjectFromS3(t *testing.T) {
+	var s3Client S3Getter = s3FailingGetter{}
+
+	s3Path := S3Path{bucket: "bucket", path: "path/"}
+	filePath := "foo/bar"
+	tempFile, _ := ioutil.TempFile("", "testDownload")
+
+	err := copyS3ObjectToFile(s3Client, s3Path, filePath, tempFile)
+	if err == nil {
+		t.Errorf("Shouldn't have been able to download file successfully but did")
+	}
+}
+
+type s3FailingReader struct {
+}
+
+type failingReader struct {
+}
+func (r *failingReader) Read(p []byte) (int, error) {
+	return 0, errors.New("failing reader")
+}
+
+func (s3FailingReader s3FailingReader) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	out := s3.GetObjectOutput {
+		Body: ioutil.NopCloser(&failingReader{}),
+	}
+	return &out, nil
+}
+
+func Test_copyS3ObjectToFile_failsToReadFromS3(t *testing.T) {
+	var s3Client S3Getter = s3FailingReader{}
+
+	s3Path := S3Path{bucket: "bucket", path: "path/"}
+	filePath := "foo/bar"
+	tempFile, _ := ioutil.TempFile("", "testDownload")
+
+	err := copyS3ObjectToFile(s3Client, s3Path, filePath, tempFile)
+	if err == nil {
+		t.Errorf("Shouldn't have been able to download file successfully but did")
+	}
+}
+
+type s3GetterFailOnClose struct {
+	s string
+}
+
+type failOnClose struct {
+	io.Reader
+}
+func (failOnClose) Close() error {
+	return errors.New("failed while closing")
+}
+func failingCloser(r io.Reader) io.ReadCloser {
+	return failOnClose{r}
+}
+
+func (s3GetterFailOnClose s3GetterFailOnClose) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	out := s3.GetObjectOutput {
+		Body: failingCloser(strings.NewReader(s3GetterFailOnClose.s)),
+	}
+	return &out, nil
+}
+
+func Test_copyS3ObjectToFile_failsWhenClosingStream(t *testing.T) {
+	var s3Client S3Getter = s3FailingReader{}
+
+	s3Path := S3Path{bucket: "bucket", path: "path/"}
+	filePath := "foo/bar"
+	tempFile, _ := ioutil.TempFile("", "testDownload")
+
+	err := copyS3ObjectToFile(s3Client, s3Path, filePath, tempFile)
+	if err == nil {
+		t.Errorf("Shouldn't have been able to download file successfully but did")
+	}
+}
+
+type s3GetterFailsFirstFewAttempts struct {
+	unsuccessfulReads int
+	s string
+}
+
+func (s3GetterFailsFirstFewAttempts *s3GetterFailsFirstFewAttempts) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	var out s3.GetObjectOutput
+	if s3GetterFailsFirstFewAttempts.unsuccessfulReads == 0 {
+		out = s3.GetObjectOutput {
+			Body: ioutil.NopCloser(strings.NewReader(s3GetterFailsFirstFewAttempts.s)),
+		}
+	} else {
+		s3GetterFailsFirstFewAttempts.unsuccessfulReads--
+		out = s3.GetObjectOutput {
+			Body: ioutil.NopCloser(&failingReader{}),
+		}
+	}
+
+	return &out, nil
+}
+
+func Test_copyS3ObjectToFile_failsFirstFewReadAttemptsButRetries(t *testing.T) {
+	var s3Client S3Getter = &s3GetterFailsFirstFewAttempts{5, "foobar"}
 
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
 	filePath := "foo/bar"
