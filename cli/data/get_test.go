@@ -3,6 +3,7 @@ package data
 import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"io/ioutil"
+	"strings"
 	"testing"
 )
 
@@ -64,8 +65,19 @@ func TestFilterObjectsUsingNonExistentKeys(t *testing.T) {
 	}
 }
 
+type S3GetterFromString struct {
+	s string
+}
+
+func (s3FromString S3GetterFromString) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	out := s3.GetObjectOutput {
+		Body: ioutil.NopCloser(strings.NewReader(s3FromString.s)),
+	}
+	return &out, nil
+}
+
 func Test_copyS3ObjectToFile_worksFirstTime(t *testing.T) {
-	var s3Client S3Getter = nil
+	var s3Client S3Getter = S3GetterFromString{"foobar"}
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
 	filePath := "foo/bar"
 	tempFile, _ := ioutil.TempFile("", "testDownload")
