@@ -242,7 +242,11 @@ func process(s3Client *s3.S3, src S3Path, basePath string, filePath string, sem 
 	}
 }
 
-func copyS3ObjectToFile(s3Client *s3.S3, src S3Path, filePath string, file *os.File) error {
+type S3Getter interface {
+	GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error)
+}
+
+func copyS3ObjectToFile(s3Client S3Getter, src S3Path, filePath string, file *os.File) error {
 	var err error
 
 	retries := s3Retries
@@ -275,7 +279,7 @@ func resetFileForWriting(file *os.File) error {
 	return err
 }
 
-func tryGetObject(s3Client *s3.S3, bucket *string, key *string, file *os.File) error {
+func tryGetObject(s3Client S3Getter, bucket *string, key *string, file *os.File) error {
 	out, err := s3Client.GetObject(&s3.GetObjectInput{
 		Bucket: bucket,
 		Key:    key,
