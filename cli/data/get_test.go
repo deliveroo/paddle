@@ -78,9 +78,22 @@ func (s3FromString S3GetterFromString) GetObject(input *s3.GetObjectInput) (*s3.
 
 func Test_copyS3ObjectToFile_worksFirstTime(t *testing.T) {
 	var s3Client S3Getter = S3GetterFromString{"foobar"}
+
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
 	filePath := "foo/bar"
 	tempFile, _ := ioutil.TempFile("", "testDownload")
 
-	copyS3ObjectToFile(s3Client, s3Path, filePath, tempFile)
+	err := copyS3ObjectToFile(s3Client, s3Path, filePath, tempFile)
+	if err != nil {
+		t.Errorf("Should have downloaded file successfully but didn't: %v", err)
+	}
+
+	bytes, err := ioutil.ReadFile(tempFile.Name())
+	if err != nil {
+		t.Errorf("Should be able to read from 'downloaded' file but couldn't %v", err)
+	}
+
+	if string(bytes) != "foobar" {
+		t.Errorf("File contents were incorrect.  Expected '%s' but got '%s'", "foobar", string(bytes))
+	}
 }
