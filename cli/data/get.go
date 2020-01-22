@@ -261,8 +261,8 @@ func copyS3ObjectToFile(s3Client S3Getter, src S3Path, filePath string, file *os
 		resetErr := resetFileForWriting(file)
 		if resetErr != nil {
 			fmt.Printf("Unable to download object from S3 (%s) and unable reset temp file to try again (%s)",
-								err,
-								resetErr)
+				err,
+				resetErr)
 			return errors.Wrapf(resetErr, "unable to reset temp file %s", file.Name())
 		}
 		retries--
