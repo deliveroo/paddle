@@ -102,12 +102,12 @@ func Test_copyS3ObjectToFile_worksFirstTime(t *testing.T) {
 
 type s3FailingGetter struct {
 }
-func (s3FailingGetter s3FailingGetter) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+func (s3FailingGetter *s3FailingGetter) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
 	return nil, errors.New("can't connect to S3")
 }
 
 func Test_copyS3ObjectToFile_failsToGetObjectFromS3(t *testing.T) {
-	var s3Client S3Getter = s3FailingGetter{}
+	var s3Client S3Getter = &s3FailingGetter{}
 	s3RetriesSleep = 1 * time.Second
 
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
@@ -122,6 +122,12 @@ func Test_copyS3ObjectToFile_failsToGetObjectFromS3(t *testing.T) {
 
 type s3FailingReader struct {
 }
+func (s3FailingReader *s3FailingReader) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	out := s3.GetObjectOutput {
+		Body: ioutil.NopCloser(&failingReader{}),
+	}
+	return &out, nil
+}
 
 type failingReader struct {
 }
@@ -129,15 +135,8 @@ func (r *failingReader) Read(p []byte) (int, error) {
 	return 0, errors.New("failing reader")
 }
 
-func (s3FailingReader s3FailingReader) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
-	out := s3.GetObjectOutput {
-		Body: ioutil.NopCloser(&failingReader{}),
-	}
-	return &out, nil
-}
-
 func Test_copyS3ObjectToFile_failsToReadFromS3(t *testing.T) {
-	var s3Client S3Getter = s3FailingReader{}
+	var s3Client S3Getter = &s3FailingReader{}
 	s3RetriesSleep = 1 * time.Second
 
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
@@ -153,6 +152,12 @@ func Test_copyS3ObjectToFile_failsToReadFromS3(t *testing.T) {
 type s3GetterFailOnClose struct {
 	s string
 }
+func (s3GetterFailOnClose *s3GetterFailOnClose) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
+	out := s3.GetObjectOutput {
+		Body: failOnClose{strings.NewReader(s3GetterFailOnClose.s)},
+	}
+	return &out, nil
+}
 
 type failOnClose struct {
 	io.Reader
@@ -160,19 +165,9 @@ type failOnClose struct {
 func (failOnClose) Close() error {
 	return errors.New("failed while closing")
 }
-func failingCloser(r io.Reader) io.ReadCloser {
-	return failOnClose{r}
-}
-
-func (s3GetterFailOnClose s3GetterFailOnClose) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
-	out := s3.GetObjectOutput {
-		Body: failingCloser(strings.NewReader(s3GetterFailOnClose.s)),
-	}
-	return &out, nil
-}
 
 func Test_copyS3ObjectToFile_failsWhenClosingStream(t *testing.T) {
-	var s3Client S3Getter = s3FailingReader{}
+	var s3Client S3Getter = &s3FailingReader{}
 	s3RetriesSleep = 1 * time.Second
 
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
@@ -189,7 +184,6 @@ type s3GetterFailsFirstFewAttempts struct {
 	unsuccessfulReads int
 	s string
 }
-
 func (s3GetterFailsFirstFewAttempts *s3GetterFailsFirstFewAttempts) GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error) {
 	var out s3.GetObjectOutput
 	if s3GetterFailsFirstFewAttempts.unsuccessfulReads == 0 {
