@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFilterObjects(t *testing.T) {
@@ -107,6 +108,7 @@ func (s3FailingGetter s3FailingGetter) GetObject(input *s3.GetObjectInput) (*s3.
 
 func Test_copyS3ObjectToFile_failsToGetObjectFromS3(t *testing.T) {
 	var s3Client S3Getter = s3FailingGetter{}
+	s3RetriesSleep = 1 * time.Second
 
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
 	filePath := "foo/bar"
@@ -136,6 +138,7 @@ func (s3FailingReader s3FailingReader) GetObject(input *s3.GetObjectInput) (*s3.
 
 func Test_copyS3ObjectToFile_failsToReadFromS3(t *testing.T) {
 	var s3Client S3Getter = s3FailingReader{}
+	s3RetriesSleep = 1 * time.Second
 
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
 	filePath := "foo/bar"
@@ -170,6 +173,7 @@ func (s3GetterFailOnClose s3GetterFailOnClose) GetObject(input *s3.GetObjectInpu
 
 func Test_copyS3ObjectToFile_failsWhenClosingStream(t *testing.T) {
 	var s3Client S3Getter = s3FailingReader{}
+	s3RetriesSleep = 1 * time.Second
 
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
 	filePath := "foo/bar"
@@ -204,6 +208,7 @@ func (s3GetterFailsFirstFewAttempts *s3GetterFailsFirstFewAttempts) GetObject(in
 
 func Test_copyS3ObjectToFile_failsFirstFewReadAttemptsButRetries(t *testing.T) {
 	var s3Client S3Getter = &s3GetterFailsFirstFewAttempts{5, "foobar"}
+	s3RetriesSleep = 1 * time.Second
 
 	s3Path := S3Path{bucket: "bucket", path: "path/"}
 	filePath := "foo/bar"

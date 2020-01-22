@@ -40,10 +40,11 @@ var (
 	getSubdir     string
 )
 
+var s3RetriesSleep = 10 * time.Second
+
 const (
 	s3ParallelGets = 100
 	s3Retries      = 10
-	s3RetriesSleep = 10 * time.Second
 )
 
 var getCmd = &cobra.Command{
