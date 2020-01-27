@@ -14,9 +14,9 @@
 package data
 
 import (
-	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -40,10 +40,11 @@ var (
 	getSubdir     string
 )
 
+var s3RetriesSleep = 10 * time.Second
+
 const (
 	s3ParallelGets = 100
 	s3Retries      = 10
-	s3RetriesSleep = 10 * time.Second
 )
 
 var getCmd = &cobra.Command{
@@ -111,17 +112,26 @@ func copyPathToDestination(source S3Path, destination string, keys []string, sub
 }
 
 func readHEAD(session *session.Session, source S3Path) string {
-	svc := s3.New(session)
-
-	out, err := getObject(svc, aws.String(source.bucket), aws.String(source.path))
-
+	tempFile, err := ioutil.TempFile("", "HEAD")
 	if err != nil {
-		exitErrorf("Error reading HEAD: %v", err)
+		exitErrorf("Unable to create temp file: %v", err)
 	}
 
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(out.Body)
-	return buf.String()
+	defer os.Remove(tempFile.Name())
+
+	svc := s3.New(session)
+
+	err = copyS3ObjectToFile(svc, source, source.path, tempFile)
+	if err != nil {
+		exitErrorf("Error copying HEAD: %v", err)
+	}
+
+	contents, err := ioutil.ReadFile(tempFile.Name())
+	if err != nil {
+		exitErrorf("Error reading HEAD file: %v", err)
+	}
+
+	return string(contents)
 }
 
 func parseDestination(destination string, subdir string) string {
@@ -219,58 +229,91 @@ func process(s3Client *s3.S3, src S3Path, basePath string, filePath string, sem 
 		return
 	}
 
-	out, err := getObject(s3Client, aws.String(src.bucket), &filePath)
+	destination := basePath + "/" + strings.TrimPrefix(filePath, src.Dirname()+"/")
+	file, err := createFile(destination)
 	if err != nil {
 		exitErrorf("%v", err)
 	}
-	defer out.Body.Close()
 
-	target := basePath + "/" + strings.TrimPrefix(filePath, src.Dirname()+"/")
-	err = store(out, target)
+	defer file.Close()
+
+	err = copyS3ObjectToFile(s3Client, src, filePath, file)
 	if err != nil {
 		exitErrorf("%v", err)
 	}
 }
 
-func getObject(s3Client *s3.S3, bucket *string, key *string) (*s3.GetObjectOutput, error) {
-	var (
-		err error
-		out *s3.GetObjectOutput
-	)
+type S3Getter interface {
+	GetObject(input *s3.GetObjectInput) (*s3.GetObjectOutput, error)
+}
+
+func copyS3ObjectToFile(s3Client S3Getter, src S3Path, filePath string, file *os.File) error {
+	var err error
 
 	retries := s3Retries
 	for retries > 0 {
-		out, err = s3Client.GetObject(&s3.GetObjectInput{
-			Bucket: bucket,
-			Key:    key,
-		})
+		err = tryGetObject(s3Client, aws.String(src.bucket), &filePath, file)
 		if err == nil {
-			return out, nil
+			// we're done
+			return nil
 		}
 
+		resetErr := resetFileForWriting(file)
+		if resetErr != nil {
+			fmt.Printf("Unable to download object from S3 (%s) and unable reset temp file to try again (%s)",
+				err,
+				resetErr)
+			return errors.Wrapf(resetErr, "unable to reset temp file %s", file.Name())
+		}
 		retries--
 		if retries > 0 {
-			fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", *key, err.Error(), s3RetriesSleep)
+			fmt.Printf("Error fetching from S3: %s, (%s); will retry in %v...	\n", filePath, err.Error(), s3RetriesSleep)
 			time.Sleep(s3RetriesSleep)
 		}
 	}
-	return nil, err
+	return err
 }
 
-func store(obj *s3.GetObjectOutput, destination string) error {
+func resetFileForWriting(file *os.File) error {
+	err := file.Truncate(0)
+	_, err = file.Seek(0, 0)
+	return err
+}
+
+func tryGetObject(s3Client S3Getter, bucket *string, key *string, file *os.File) error {
+	out, err := s3Client.GetObject(&s3.GetObjectInput{
+		Bucket: bucket,
+		Key:    key,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	defer out.Body.Close()
+
+	return storeS3ObjectToFile(out, file)
+}
+
+func storeS3ObjectToFile(obj *s3.GetObjectOutput, file *os.File) error {
+	bytes, err := io.Copy(file, obj.Body)
+	if err != nil {
+		return errors.Wrapf(err, "copying file %s", file.Name())
+	}
+
+	fmt.Printf("%s -> %d bytes\n", file.Name(), bytes)
+	return nil
+}
+
+func createFile(destination string) (*os.File, error) {
 	err := os.MkdirAll(filepath.Dir(destination), 0777)
+	if err != nil {
+		return nil, errors.Wrapf(err, "creating directory %s", filepath.Dir(destination))
+	}
 
 	file, err := os.Create(destination)
 	if err != nil {
-		return errors.Wrapf(err, "creating destination %s", destination)
+		return nil, errors.Wrapf(err, "creating destination %s", destination)
 	}
-	defer file.Close()
-
-	bytes, err := io.Copy(file, obj.Body)
-	if err != nil {
-		return errors.Wrapf(err, "copying file %s", destination)
-	}
-
-	fmt.Printf("%s -> %d bytes\n", destination, bytes)
-	return nil
+	return file, nil
 }
