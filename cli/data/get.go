@@ -123,7 +123,7 @@ func readHEAD(session *session.Session, source S3Path) string {
 
 	err = copyS3ObjectToFile(svc, source, source.path, tempFile)
 	if err != nil {
-		exitErrorf("Error reading HEAD: %v", err)
+		exitErrorf("Error copying HEAD: %v", err)
 	}
 
 	contents, err := ioutil.ReadFile(tempFile.Name())
