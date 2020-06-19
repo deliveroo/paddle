@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/deliveroo/paddle/cli/cleanup"
 	"github.com/deliveroo/paddle/cli/data"
 	"github.com/deliveroo/paddle/cli/pipeline"
 	"github.com/deliveroo/paddle/cli/steps"
@@ -58,6 +59,7 @@ func init() {
 	RootCmd.AddCommand(data.DataCmd)
 	RootCmd.AddCommand(pipeline.PipelineCmd)
 	RootCmd.AddCommand(steps.StepsCmd)
+	RootCmd.AddCommand(cleanup.CleanUpCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
