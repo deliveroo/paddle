@@ -42,7 +42,7 @@ func init() {
 }
 
 func runPodsCleanup() {
-	pods := clientset.CoreV1().Pods("")
+	pods := clientset.CoreV1().Pods("modeltraining")
 	podList, err := pods.List(metav1.ListOptions{})
 	if err != nil {
 		logFatalf("[paddle] error fetching list of pods: %s", err.Error())
