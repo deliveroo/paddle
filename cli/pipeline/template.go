@@ -3,6 +3,7 @@ package pipeline
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -192,7 +193,7 @@ func NewPodDefinition(pipelineDefinition *PipelineDefinition, pipelineDefinition
 	stepName := sanitizeName(pipelineDefinitionStep.Step)
 	branchName := sanitizeName(pipelineDefinitionStep.Branch)
 	stepVersion := sanitizeName(pipelineDefinitionStep.Version)
-	timestamp := time.Now().UTC().String()
+	timestamp := strconv.Itoa(int(time.Now().UTC().Unix()))
 	podName := fmt.Sprintf("%s-%s-%s-%s-%s", sanitizeName(pipelineDefinition.Pipeline), sanitizeName(pipelineDefinitionStep.Version), stepName, branchName, timestamp[len(timestamp)-4:])
 
 	return &PodDefinition{
