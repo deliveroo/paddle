@@ -71,4 +71,5 @@ func deletePod(podInterface v1.PodInterface, pod v12.Pod) {
 			log.Printf("[paddle] error deleting pod %s", pod.Name)
 		}
 	}
+	log.Printf("[paddle] deleted pod with name: %s, status: %s", pod.Name, string(pod.Status.Phase))
 }
