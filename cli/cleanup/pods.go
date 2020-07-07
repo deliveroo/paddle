@@ -54,7 +54,7 @@ func runPodsCleanup() {
 			deletePod(pods, pod)
 		case "Failed":
 			diff := time.Now().UTC().Sub(pod.CreationTimestamp.UTC())
-			if diff.Hours() >= 4 {
+			if diff.Hours() >= 8 {
 				deletePod(pods, pod)
 			}
 		default:
